@@ -1,6 +1,7 @@
 package com.studytracker.service;
 
 import com.studytracker.dto.AssignmentDto;
+import com.studytracker.dto.PlannerItemDto;
 import com.studytracker.dto.StudentDto;
 import com.studytracker.exception.*;
 import lombok.extern.slf4j.Slf4j;
@@ -30,11 +31,9 @@ public class CanvasApiService {
     private final WebClient webClient;
     private final String canvasBaseUrl;
 
-    public CanvasApiService(@Value("${canvas.api.base-url}") String canvasBaseUrl) {
+    public CanvasApiService(@Value("${canvas.api.base-url}") String canvasBaseUrl, WebClient canvasWebClient) {
         this.canvasBaseUrl = canvasBaseUrl;
-        this.webClient = WebClient.builder()
-                .baseUrl(canvasBaseUrl)
-                .build();
+        this.webClient = canvasWebClient;
     }
 
     /**
@@ -107,18 +106,18 @@ public class CanvasApiService {
     }
 
     /**
-     * Retrieves assignments for a specific student within a date range.
+     * Retrieves planner items (assignments and announcements) for a specific student within a date range.
      * 
      * @param token Canvas API token
      * @param studentId Canvas user ID of the student
-     * @param startDate Start date for assignment filtering (inclusive)
-     * @param endDate End date for assignment filtering (inclusive)
-     * @return List of assignments for the student
+     * @param startDate Start date for filtering (inclusive)
+     * @param endDate End date for filtering (inclusive)
+     * @return List of planner items for the student
      * @throws InvalidTokenException if token is invalid
      * @throws InsufficientPermissionsException if token lacks permissions for this student
      * @throws CanvasApiException for other API errors
      */
-    public List<AssignmentDto> getStudentAssignments(String token, Long studentId, 
+    public List<PlannerItemDto> getStudentAssignments(String token, Long studentId, 
                                                    LocalDate startDate, LocalDate endDate) {
         log.debug("Fetching assignments for student {} from {} to {}", studentId, startDate, endDate);
         
@@ -126,17 +125,16 @@ public class CanvasApiService {
             String startDateStr = startDate.format(DateTimeFormatter.ISO_LOCAL_DATE);
             String endDateStr = endDate.format(DateTimeFormatter.ISO_LOCAL_DATE);
             
-            List<AssignmentDto> assignments = webClient.get()
+            List<PlannerItemDto> assignments = webClient.get()
                     .uri(uriBuilder -> uriBuilder
-                            .path("/api/v1/planner/items")
-                            .queryParam("user_id", studentId)
+                            .path("/api/v1/users/{studentId}/planner/items")
                             .queryParam("start_date", startDateStr)
                             .queryParam("end_date", endDateStr)
-                            .queryParam("filter", "new_activity")
-                            .build())
+                            .queryParam("per_page", 100)
+                            .build(studentId))
                     .header("Authorization", "Bearer " + token)
                     .retrieve()
-                    .bodyToMono(new ParameterizedTypeReference<List<AssignmentDto>>() {})
+                    .bodyToMono(new ParameterizedTypeReference<List<PlannerItemDto>>() {})
                     .timeout(Duration.ofSeconds(20))
                     .retryWhen(Retry.backoff(3, Duration.ofSeconds(2))
                             .filter(this::isRetryableException))

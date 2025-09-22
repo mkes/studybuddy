@@ -27,7 +27,7 @@ Set the following environment variables or update `application.yml`:
 export DATABASE_URL=jdbc:postgresql://localhost:5432/studytracker_dev
 export DATABASE_USERNAME=studytracker
 export DATABASE_PASSWORD=password
-export CANVAS_API_BASE_URL=https://your-canvas-instance.com/api/v1
+export CANVAS_API_BASE_URL=https://lgsuhsd.instructure.com/api/v1
 ```
 
 ### Running the Application

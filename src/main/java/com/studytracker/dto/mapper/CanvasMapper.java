@@ -1,6 +1,7 @@
 package com.studytracker.dto.mapper;
 
 import com.studytracker.dto.AssignmentDto;
+import com.studytracker.dto.PlannerItemDto;
 import com.studytracker.dto.StudentDto;
 import com.studytracker.model.PlannerItem;
 import org.springframework.stereotype.Component;
@@ -14,6 +15,59 @@ import java.util.stream.Collectors;
  */
 @Component
 public class CanvasMapper {
+
+    /**
+     * Converts a PlannerItemDto from Canvas API to an AssignmentDto.
+     * Only converts items that are assignments (not announcements).
+     * 
+     * @param plannerItemDto Canvas API planner item response
+     * @return AssignmentDto or null if not an assignment
+     */
+    public AssignmentDto plannerItemToAssignmentDto(PlannerItemDto plannerItemDto) {
+        if (plannerItemDto == null || !"assignment".equals(plannerItemDto.getPlannableType())) {
+            return null;
+        }
+
+        AssignmentDto.SubmissionDto submission = null;
+        if (plannerItemDto.getSubmissions() != null) {
+            PlannerItemDto.SubmissionDto plannerSubmission = plannerItemDto.getSubmissions();
+            submission = AssignmentDto.SubmissionDto.builder()
+                    .submitted(plannerSubmission.getSubmitted())
+                    .missing(plannerSubmission.getMissing())
+                    .late(plannerSubmission.getLate())
+                    .graded(plannerSubmission.getGraded())
+                    .build();
+        }
+
+        return AssignmentDto.builder()
+                .plannableId(plannerItemDto.getPlannableId())
+                .assignmentTitle(plannerItemDto.getPlannable() != null ? plannerItemDto.getPlannable().getTitle() : null)
+                .contextName(plannerItemDto.getContextName())
+                .dueAt(plannerItemDto.getPlannable() != null ? plannerItemDto.getPlannable().getDueAt() : plannerItemDto.getPlannableDate())
+                .pointsPossible(plannerItemDto.getPlannable() != null ? 
+                    (plannerItemDto.getPlannable().getPointsPossible() != null ? 
+                        java.math.BigDecimal.valueOf(plannerItemDto.getPlannable().getPointsPossible()) : null) : null)
+                .submission(submission)
+                .build();
+    }
+
+    /**
+     * Converts a list of PlannerItemDto objects to AssignmentDto objects.
+     * Filters out non-assignment items (like announcements).
+     * 
+     * @param plannerItemDtos List of Canvas API planner item responses
+     * @return List of AssignmentDto objects
+     */
+    public List<AssignmentDto> plannerItemsToAssignmentDtos(List<PlannerItemDto> plannerItemDtos) {
+        if (plannerItemDtos == null) {
+            return List.of();
+        }
+
+        return plannerItemDtos.stream()
+                .map(this::plannerItemToAssignmentDto)
+                .filter(dto -> dto != null) // Filter out null results (non-assignments)
+                .collect(Collectors.toList());
+    }
 
     /**
      * Converts an AssignmentDto from Canvas API to a PlannerItem entity.

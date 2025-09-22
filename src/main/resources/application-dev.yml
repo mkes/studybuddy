@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/studytracker_dev
+    url: jdbc:postgresql://localhost:5432/studytracker
     username: studytracker
     password: password
   
@@ -17,7 +17,7 @@ server:
 
 canvas:
   api:
-    base-url: https://canvas.instructure.com/api/v1
+    base-url: https://lgsuhsd.instructure.com/api/v1
     timeout: 30000
 
 logging:

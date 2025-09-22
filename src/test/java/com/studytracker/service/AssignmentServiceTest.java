@@ -1,6 +1,7 @@
 package com.studytracker.service;
 
 import com.studytracker.dto.AssignmentDto;
+import com.studytracker.dto.PlannerItemDto;
 import com.studytracker.dto.mapper.CanvasMapper;
 import com.studytracker.model.PlannerItem;
 import com.studytracker.repository.PlannerItemRepository;
@@ -65,13 +66,15 @@ class AssignmentServiceTest {
     @DisplayName("Should sync assignments successfully with default date range")
     void syncAssignments_WithDefaultDateRange_ShouldSyncSuccessfully() {
         // Given
+        List<PlannerItemDto> plannerItemDtos = createMockPlannerItemDtos();
         List<AssignmentDto> assignmentDtos = createMockAssignmentDtos();
         List<PlannerItem> newAssignments = createMockPlannerItems();
         List<PlannerItem> existingAssignments = List.of();
         List<PlannerItem> savedAssignments = createMockPlannerItems();
 
         when(canvasApiService.getStudentAssignments(eq(token), eq(studentId), any(LocalDate.class), any(LocalDate.class)))
-                .thenReturn(assignmentDtos);
+                .thenReturn(plannerItemDtos);
+        when(canvasMapper.plannerItemsToAssignmentDtos(plannerItemDtos)).thenReturn(assignmentDtos);
         when(canvasMapper.toPlannerItems(assignmentDtos, studentId)).thenReturn(newAssignments);
         when(plannerItemRepository.findByStudentIdAndDueAtBetweenOrderByDueAtDesc(eq(studentId), any(LocalDateTime.class), any(LocalDateTime.class)))
                 .thenReturn(existingAssignments);
@@ -93,13 +96,15 @@ class AssignmentServiceTest {
     @DisplayName("Should sync assignments with custom date range")
     void syncAssignments_WithCustomDateRange_ShouldSyncSuccessfully() {
         // Given
+        List<PlannerItemDto> plannerItemDtos = createMockPlannerItemDtos();
         List<AssignmentDto> assignmentDtos = createMockAssignmentDtos();
         List<PlannerItem> newAssignments = createMockPlannerItems();
         List<PlannerItem> existingAssignments = List.of();
         List<PlannerItem> savedAssignments = createMockPlannerItems();
 
         when(canvasApiService.getStudentAssignments(token, studentId, startDate, endDate))
-                .thenReturn(assignmentDtos);
+                .thenReturn(plannerItemDtos);
+        when(canvasMapper.plannerItemsToAssignmentDtos(plannerItemDtos)).thenReturn(assignmentDtos);
         when(canvasMapper.toPlannerItems(assignmentDtos, studentId)).thenReturn(newAssignments);
         when(plannerItemRepository.findByStudentIdAndDueAtBetweenOrderByDueAtDesc(studentId, startDateTime, endDateTime))
                 .thenReturn(existingAssignments);
@@ -121,13 +126,15 @@ class AssignmentServiceTest {
     @DisplayName("Should update existing assignments during sync")
     void syncAssignments_WithExistingAssignments_ShouldUpdateExisting() {
         // Given
+        List<PlannerItemDto> plannerItemDtos = createMockPlannerItemDtos();
         List<AssignmentDto> assignmentDtos = createMockAssignmentDtos();
         List<PlannerItem> newAssignments = createMockPlannerItems();
         List<PlannerItem> existingAssignments = createExistingPlannerItems();
         List<PlannerItem> savedAssignments = createMockPlannerItems();
 
         when(canvasApiService.getStudentAssignments(token, studentId, startDate, endDate))
-                .thenReturn(assignmentDtos);
+                .thenReturn(plannerItemDtos);
+        when(canvasMapper.plannerItemsToAssignmentDtos(plannerItemDtos)).thenReturn(assignmentDtos);
         when(canvasMapper.toPlannerItems(assignmentDtos, studentId)).thenReturn(newAssignments);
         when(plannerItemRepository.findByStudentIdAndDueAtBetweenOrderByDueAtDesc(studentId, startDateTime, endDateTime))
                 .thenReturn(existingAssignments);
@@ -476,4 +483,30 @@ class AssignmentServiceTest {
                 .graded(false)
                 .build();
     }
+
+    private List<PlannerItemDto> createMockPlannerItemDtos() {
+        return List.of(
+                PlannerItemDto.builder()
+                        .plannableId(1L)
+                        .plannableType("assignment")
+                        .contextName("Mathematics")
+                        .plannable(PlannerItemDto.PlannableDto.builder()
+                                .id(1L)
+                                .title("Math Homework")
+                                .pointsPossible(100.0)
+                                .build())
+                        .build(),
+                PlannerItemDto.builder()
+                        .plannableId(2L)
+                        .plannableType("assignment")
+                        .contextName("Science")
+                        .plannable(PlannerItemDto.PlannableDto.builder()
+                                .id(2L)
+                                .title("Science Project")
+                                .pointsPossible(150.0)
+                                .build())
+                        .build()
+        );
+    }
+
 }

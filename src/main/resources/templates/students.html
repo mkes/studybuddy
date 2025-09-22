@@ -95,7 +95,7 @@
             </div>
 
             <!-- Info message display -->
-            <div th:if="${message and messageType == 'info'}" class="alert alert-info alert-dismissible fade show" role="alert">
+            <div th:if="${message != null and messageType == 'info'}" class="alert alert-info alert-dismissible fade show" role="alert">
                 <i class="bi bi-info-circle-fill me-2"></i>
                 <span th:text="${message}"></span>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>

@@ -1,6 +1,7 @@
 package com.studytracker.service;
 
 import com.studytracker.dto.AssignmentDto;
+import com.studytracker.dto.PlannerItemDto;
 import com.studytracker.dto.mapper.CanvasMapper;
 import com.studytracker.model.PlannerItem;
 import com.studytracker.repository.PlannerItemRepository;
@@ -65,11 +66,17 @@ public class AssignmentService {
                  studentId, startDate, endDate);
 
         try {
-            // Fetch assignments from Canvas API
-            List<AssignmentDto> assignmentDtos = canvasApiService.getStudentAssignments(
+            // Fetch planner items from Canvas API
+            List<PlannerItemDto> plannerItemDtos = canvasApiService.getStudentAssignments(
                     token, studentId, startDate, endDate);
             
-            log.debug("Fetched {} assignments from Canvas API for student {}", 
+            log.debug("Fetched {} planner items from Canvas API for student {}", 
+                     plannerItemDtos.size(), studentId);
+
+            // Convert planner items to assignment DTOs (filters out non-assignments)
+            List<AssignmentDto> assignmentDtos = canvasMapper.plannerItemsToAssignmentDtos(plannerItemDtos);
+            
+            log.debug("Converted {} assignments from planner items for student {}", 
                      assignmentDtos.size(), studentId);
 
             // Convert DTOs to entities

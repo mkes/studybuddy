@@ -4,7 +4,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.studytracker.dto.AssignmentDto;
+import com.studytracker.dto.PlannerItemDto;
 import com.studytracker.dto.StudentDto;
+import org.springframework.web.reactive.function.client.WebClient;
 import com.studytracker.exception.*;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
@@ -42,7 +44,8 @@ class CanvasApiServiceTest {
         mockWebServer.start();
         
         String baseUrl = mockWebServer.url("/").toString();
-        canvasApiService = new CanvasApiService(baseUrl);
+        WebClient webClient = WebClient.builder().baseUrl(baseUrl).build();
+        canvasApiService = new CanvasApiService(baseUrl, webClient);
         
         objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
@@ -192,38 +195,39 @@ class CanvasApiServiceTest {
         LocalDate startDate = LocalDate.of(2025, 8, 1);
         LocalDate endDate = LocalDate.of(2025, 9, 30);
         
-        List<AssignmentDto> expectedAssignments = List.of(
-            AssignmentDto.builder()
+        List<PlannerItemDto> expectedPlannerItems = List.of(
+            PlannerItemDto.builder()
                 .plannableId(2001L)
-                .studentId(studentId)
-                .assignmentTitle("Math Homework 1")
+                .plannableType("assignment")
                 .contextName("Algebra I")
-                .dueAt(LocalDateTime.of(2025, 8, 15, 23, 59))
-                .pointsPossible(new BigDecimal("100.00"))
-                .currentGrade(new BigDecimal("85.00"))
-                .submission(AssignmentDto.SubmissionDto.builder()
+                .plannable(PlannerItemDto.PlannableDto.builder()
+                    .id(2001L)
+                    .title("Math Homework 1")
+                    .pointsPossible(100.0)
+                    .dueAt(LocalDateTime.of(2025, 8, 15, 23, 59))
+                    .build())
+                .submissions(PlannerItemDto.SubmissionDto.builder()
                     .submitted(true)
                     .missing(false)
                     .late(false)
                     .graded(true)
-                    .score(new BigDecimal("85.00"))
-                    .grade("B")
-                    .workflowState("graded")
                     .build())
                 .build(),
-            AssignmentDto.builder()
+            PlannerItemDto.builder()
                 .plannableId(2002L)
-                .studentId(studentId)
-                .assignmentTitle("Science Lab Report")
+                .plannableType("assignment")
                 .contextName("Biology")
-                .dueAt(LocalDateTime.of(2025, 8, 20, 23, 59))
-                .pointsPossible(new BigDecimal("50.00"))
-                .submission(AssignmentDto.SubmissionDto.builder()
+                .plannable(PlannerItemDto.PlannableDto.builder()
+                    .id(2002L)
+                    .title("Science Lab Report")
+                    .pointsPossible(50.0)
+                    .dueAt(LocalDateTime.of(2025, 8, 20, 23, 59))
+                    .build())
+                .submissions(PlannerItemDto.SubmissionDto.builder()
                     .submitted(false)
                     .missing(true)
                     .late(false)
                     .graded(false)
-                    .workflowState("unsubmitted")
                     .build())
                 .build()
         );
@@ -231,29 +235,28 @@ class CanvasApiServiceTest {
         mockWebServer.enqueue(new MockResponse()
             .setResponseCode(200)
             .setHeader("Content-Type", "application/json")
-            .setBody(toJson(expectedAssignments)));
+            .setBody(toJson(expectedPlannerItems)));
 
         // When
-        List<AssignmentDto> result = canvasApiService.getStudentAssignments(VALID_TOKEN, studentId, startDate, endDate);
+        List<PlannerItemDto> result = canvasApiService.getStudentAssignments(VALID_TOKEN, studentId, startDate, endDate);
 
         // Then
         assertThat(result).hasSize(2);
         
-        AssignmentDto assignment1 = result.get(0);
-        assertThat(assignment1.getPlannableId()).isEqualTo(2001L);
-        assertThat(assignment1.getAssignmentTitle()).isEqualTo("Math Homework 1");
-        assertThat(assignment1.getContextName()).isEqualTo("Algebra I");
-        assertThat(assignment1.getSubmission().getSubmitted()).isTrue();
-        assertThat(assignment1.getSubmission().getGraded()).isTrue();
+        PlannerItemDto plannerItem1 = result.get(0);
+        assertThat(plannerItem1.getPlannableId()).isEqualTo(2001L);
+        assertThat(plannerItem1.getPlannable().getTitle()).isEqualTo("Math Homework 1");
+        assertThat(plannerItem1.getContextName()).isEqualTo("Algebra I");
+        assertThat(plannerItem1.getSubmissions().getSubmitted()).isTrue();
+        assertThat(plannerItem1.getSubmissions().getGraded()).isTrue();
         
-        AssignmentDto assignment2 = result.get(1);
-        assertThat(assignment2.getPlannableId()).isEqualTo(2002L);
-        assertThat(assignment2.getAssignmentTitle()).isEqualTo("Science Lab Report");
-        assertThat(assignment2.getSubmission().getMissing()).isTrue();
+        PlannerItemDto plannerItem2 = result.get(1);
+        assertThat(plannerItem2.getPlannableId()).isEqualTo(2002L);
+        assertThat(plannerItem2.getPlannable().getTitle()).isEqualTo("Science Lab Report");
+        assertThat(plannerItem2.getSubmissions().getMissing()).isTrue();
         
         RecordedRequest request = mockWebServer.takeRequest();
-        assertThat(request.getPath()).contains("/api/v1/planner/items");
-        assertThat(request.getPath()).contains("user_id=1001");
+        assertThat(request.getPath()).contains("/api/v1/users/1001/planner/items");
         assertThat(request.getPath()).contains("start_date=2025-08-01");
         assertThat(request.getPath()).contains("end_date=2025-09-30");
         assertThat(request.getHeader("Authorization")).isEqualTo("Bearer " + VALID_TOKEN);
