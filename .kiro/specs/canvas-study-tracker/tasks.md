@@ -47,7 +47,7 @@
   - Write controller tests for authentication flow and error scenarios
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 6.5_
 
-- [ ] 8. Create student selection controller and interface
+- [x] 8. Create student selection controller and interface
   - Implement StudentController with GET /students endpoint
   - Create students.html Thymeleaf template with dropdown selection interface
   - Add logic to retrieve and display observed students from Canvas API
