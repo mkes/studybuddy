@@ -17,7 +17,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import jakarta.servlet.http.HttpSession;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Controller for handling student selection and dashboard functionality.
@@ -101,6 +102,60 @@ public class StudentController {
     }
 
     /**
+     * Display assignment details in a popup modal.
+     * 
+     * @param studentId Canvas user ID of the student
+     * @param assignmentId Plannable ID of the assignment
+     * @param session HTTP session containing the Canvas API token
+     * @param model Thymeleaf model for passing data to the view
+     * @param redirectAttributes For flash messages on redirect
+     * @return assignment details template name or redirect if not authenticated
+     */
+    @GetMapping("/students/{studentId}/assignments/{assignmentId}")
+    public String assignmentDetails(@PathVariable Long studentId,
+                                  @PathVariable Long assignmentId,
+                                  HttpSession session,
+                                  Model model,
+                                  RedirectAttributes redirectAttributes) {
+        // Check if user is authenticated
+        String canvasToken = (String) session.getAttribute("canvasToken");
+        if (canvasToken == null || canvasToken.trim().isEmpty()) {
+            log.warn("Unauthenticated access attempt to assignment details");
+            redirectAttributes.addFlashAttribute("error", "Please log in to access StudyTracker.");
+            return "redirect:/";
+        }
+
+        try {
+            // Get assignments and find the specific one
+            List<PlannerItem> assignments = assignmentService.getAssignmentsByStudent(studentId);
+            PlannerItem assignment = assignments.stream()
+                    .filter(a -> a.getPlannableId().equals(assignmentId))
+                    .findFirst()
+                    .orElse(null);
+
+            if (assignment == null) {
+                model.addAttribute("error", "Assignment not found.");
+                return "assignment-details";
+            }
+
+            // Calculate assignment status
+            String status = assignmentService.calculateAssignmentStatus(assignment);
+            assignment.setStatus(status);
+            assignment.setStatusBadgeClass(assignmentService.getStatusBadgeClass(status));
+
+            model.addAttribute("assignment", assignment);
+            model.addAttribute("studentId", studentId);
+            
+            return "assignment-details";
+            
+        } catch (Exception e) {
+            log.error("Error loading assignment details for student {} assignment {}", studentId, assignmentId, e);
+            model.addAttribute("error", "Unable to load assignment details.");
+            return "assignment-details";
+        }
+    }
+
+    /**
      * Display the dashboard for a specific student with assignments.
      * Automatically syncs assignments from Canvas API and displays them with status badges.
      * 
@@ -158,9 +213,29 @@ public class StudentController {
                     .filter(assignment -> "missing".equals(assignment.getStatus()) || "overdue".equals(assignment.getStatus()))
                     .count();
             
+            // Group assignments by course for table display
+            Map<String, List<PlannerItem>> assignmentsByCourse = assignments.stream()
+                    .collect(Collectors.groupingBy(
+                        assignment -> assignment.getContextName() != null ? assignment.getContextName() : "Unknown Course",
+                        LinkedHashMap::new,
+                        Collectors.toList()
+                    ));
+            
+            // Get unique courses and statuses for filter dropdowns
+            Set<String> uniqueCourses = assignments.stream()
+                    .map(assignment -> assignment.getContextName() != null ? assignment.getContextName() : "Unknown Course")
+                    .collect(Collectors.toCollection(LinkedHashSet::new));
+            
+            Set<String> uniqueStatuses = assignments.stream()
+                    .map(PlannerItem::getStatus)
+                    .collect(Collectors.toCollection(LinkedHashSet::new));
+            
             model.addAttribute("studentId", studentId);
             model.addAttribute("student", currentStudent);
             model.addAttribute("assignments", assignments);
+            model.addAttribute("assignmentsByCourse", assignmentsByCourse);
+            model.addAttribute("uniqueCourses", uniqueCourses);
+            model.addAttribute("uniqueStatuses", uniqueStatuses);
             model.addAttribute("assignmentCount", assignments.size());
             model.addAttribute("submittedCount", submittedCount);
             model.addAttribute("pendingCount", pendingCount);

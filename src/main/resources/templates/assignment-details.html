@@ -1,0 +1,141 @@
+<!-- Assignment Details Template (for modal popup) -->
+<div th:if="${assignment}">
+    <div class="row">
+        <div class="col-md-8">
+            <h4 th:text="${assignment.assignmentTitle}">Assignment Title</h4>
+            <p class="text-muted mb-3" th:text="${assignment.contextName}">Course Name</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <span class="badge fs-6" 
+                  th:classappend="${assignment.statusBadgeClass}"
+                  th:text="${#strings.capitalize(assignment.status)}">
+                Status
+            </span>
+        </div>
+    </div>
+    
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="bi bi-calendar-event text-primary me-2"></i>
+                        Due Date
+                    </h6>
+                    <p class="card-text" th:if="${assignment.dueAt}">
+                        <span th:class="${(assignment.status == 'overdue' or assignment.status == 'missing') ? 'text-danger fw-bold' : ''}"
+                              th:text="${#temporals.format(assignment.dueAt, 'EEEE, MMMM dd, yyyy')}">
+                            Due Date
+                        </span>
+                        <br>
+                        <small class="text-muted" th:text="${#temporals.format(assignment.dueAt, 'HH:mm')}">Time</small>
+                    </p>
+                    <p class="card-text text-muted" th:unless="${assignment.dueAt}">
+                        No due date specified
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="bi bi-trophy text-warning me-2"></i>
+                        Points & Grade
+                    </h6>
+                    <p class="card-text">
+                        <strong>Points Possible:</strong> 
+                        <span th:if="${assignment.pointsPossible}" th:text="${assignment.pointsPossible + ' pts'}">Points</span>
+                        <span th:unless="${assignment.pointsPossible}" class="text-muted">Not specified</span>
+                    </p>
+                    <p class="card-text">
+                        <strong>Current Grade:</strong>
+                        <span th:if="${assignment.currentGrade}" 
+                              class="fw-bold text-success"
+                              th:text="${assignment.currentGrade + (assignment.pointsPossible ? '/' + assignment.pointsPossible : '') + ' pts'}">
+                            Grade
+                        </span>
+                        <span th:unless="${assignment.currentGrade}" class="text-muted">Not graded yet</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="bi bi-info-circle text-info me-2"></i>
+                        Submission Status
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <i th:class="${assignment.submitted ? 'bi bi-check-circle-fill text-success' : 'bi bi-x-circle text-muted'} me-2"></i>
+                                <span th:class="${assignment.submitted ? 'text-success' : 'text-muted'}">
+                                    <span th:if="${assignment.submitted}">Submitted</span>
+                                    <span th:unless="${assignment.submitted}">Not Submitted</span>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <i th:class="${assignment.graded ? 'bi bi-check-circle-fill text-success' : 'bi bi-x-circle text-muted'} me-2"></i>
+                                <span th:class="${assignment.graded ? 'text-success' : 'text-muted'}">
+                                    <span th:if="${assignment.graded}">Graded</span>
+                                    <span th:unless="${assignment.graded}">Not Graded</span>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="d-flex align-items-center mb-2" th:if="${assignment.late}">
+                                <i class="bi bi-clock text-warning me-2"></i>
+                                <span class="text-warning">Late Submission</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="d-flex align-items-center mb-2" th:if="${assignment.missing}">
+                                <i class="bi bi-exclamation-triangle text-danger me-2"></i>
+                                <span class="text-danger">Missing</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="bi bi-gear text-secondary me-2"></i>
+                        Assignment Details
+                    </h6>
+                    <p class="card-text">
+                        <strong>Assignment ID:</strong> <span th:text="${assignment.plannableId}">ID</span>
+                    </p>
+                    <p class="card-text" th:if="${assignment.createdAt}">
+                        <strong>Created:</strong> <span th:text="${#temporals.format(assignment.createdAt, 'MMM dd, yyyy HH:mm')}">Created Date</span>
+                    </p>
+                    <p class="card-text" th:if="${assignment.updatedAt}">
+                        <strong>Last Updated:</strong> <span th:text="${#temporals.format(assignment.updatedAt, 'MMM dd, yyyy HH:mm')}">Updated Date</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:if="${error}" class="alert alert-danger">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+    <span th:text="${error}">Error message</span>
+</div>
+
+<div th:unless="${assignment or error}" class="alert alert-warning">
+    <i class="bi bi-info-circle-fill me-2"></i>
+    Assignment not found.
+</div>

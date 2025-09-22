@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,132 +8,34 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
     <style>
         .dashboard-container {
-            max-width: 1000px;
-            margin: 30px auto;
-            padding: 30px;
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 20px;
         }
-
         .logo {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
         }
-
         .logo h1 {
             color: #007bff;
             font-weight: bold;
         }
-
         .student-header {
             background: linear-gradient(135deg, #007bff, #0056b3);
             color: white;
             padding: 20px;
             border-radius: 10px;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
         }
-
-        .assignment-card {
-            border: 1px solid #dee2e6;
+        .filters-section {
+            background: #f8f9fa;
+            padding: 15px;
             border-radius: 8px;
-            margin-bottom: 15px;
-            transition: box-shadow 0.2s ease;
+            margin-bottom: 20px;
         }
-
-        .assignment-card:hover {
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .assignment-header {
-            background-color: #f8f9fa;
-            padding: 15px;
-            border-bottom: 1px solid #dee2e6;
-            border-radius: 8px 8px 0 0;
-        }
-
-        .assignment-body {
-            padding: 15px;
-        }
-
-        .assignment-title {
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 5px;
-        }
-
-        .course-name {
-            color: #6c757d;
-            font-size: 0.9em;
-            margin-bottom: 10px;
-        }
-
-        .assignment-details {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            align-items: center;
-        }
-
-        .detail-item {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 0.9em;
-        }
-
-        .badge-success {
-            background-color: #28a745 !important;
-        }
-
-        .badge-danger {
-            background-color: #dc3545 !important;
-        }
-
-        .badge-warning {
-            background-color: #ffc107 !important;
-            color: #212529 !important;
-        }
-
-        .badge-primary {
-            background-color: #007bff !important;
-        }
-
-        .badge-secondary {
-            background-color: #6c757d !important;
-        }
-
-        .status-badge {
-            font-size: 0.8em;
-            padding: 4px 8px;
-            border-radius: 12px;
-        }
-
-        .grade-display {
-            font-weight: 600;
-        }
-
-        .due-date {
-            color: #495057;
-        }
-
-        .overdue {
-            color: #dc3545;
-            font-weight: 600;
-        }
-
-        .loading-spinner {
-            text-align: center;
-            padding: 40px;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: #6c757d;
-        }
-
         .stats-row {
             margin-bottom: 20px;
         }
-
         .stat-card {
             background: white;
             border: 1px solid #dee2e6;
@@ -142,22 +43,64 @@
             padding: 15px;
             text-align: center;
         }
-
         .stat-number {
             font-size: 1.5em;
             font-weight: bold;
             color: #007bff;
         }
-
         .stat-label {
             color: #6c757d;
             font-size: 0.9em;
         }
+        .course-group {
+            margin-bottom: 30px;
+        }
+        .course-header {
+            background: #e9ecef;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #495057;
+        }
+        .assignment-link {
+            color: #007bff;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .assignment-link:hover {
+            color: #0056b3;
+            text-decoration: underline;
+        }
+        .badge-success {
+            background-color: #28a745 !important;
+        }
+        .badge-danger {
+            background-color: #dc3545 !important;
+        }
+        .badge-warning {
+            background-color: #ffc107 !important;
+            color: #212529 !important;
+        }
+        .badge-primary {
+            background-color: #007bff !important;
+        }
+        .badge-secondary {
+            background-color: #6c757d !important;
+        }
+        .table th {
+            background-color: #f8f9fa;
+            border-top: none;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
     </style>
 </head>
-
 <body class="bg-light">
-    <div class="container">
+    <div class="container-fluid">
         <div class="dashboard-container">
             <!-- Header -->
             <div class="logo">
@@ -196,8 +139,7 @@
             </div>
 
             <!-- Info message display -->
-            <div th:if="${message != null and messageType == 'info'}"
-                class="alert alert-info alert-dismissible fade show" role="alert">
+            <div th:if="${message != null and messageType == 'info'}" class="alert alert-info alert-dismissible fade show" role="alert">
                 <i class="bi bi-info-circle-fill me-2"></i>
                 <span th:text="${message}"></span>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -233,76 +175,107 @@
                 </div>
             </div>
 
-            <!-- Assignments List -->
+            <!-- Filters Section -->
+            <div th:if="${assignments != null and !assignments.empty}" class="filters-section">
+                <div class="row align-items-center">
+                    <div class="col-md-3">
+                        <label for="courseFilter" class="form-label">Filter by Course:</label>
+                        <select id="courseFilter" class="form-select">
+                            <option value="">All Courses</option>
+                            <option th:each="course : ${uniqueCourses}" th:value="${course}" th:text="${course}">Course Name</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="statusFilter" class="form-label">Filter by Status:</label>
+                        <select id="statusFilter" class="form-select">
+                            <option value="">All Statuses</option>
+                            <option th:each="status : ${uniqueStatuses}" th:value="${status}" th:text="${#strings.capitalize(status)}">Status</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="dateFilter" class="form-label">Filter by Due Date:</label>
+                        <select id="dateFilter" class="form-select">
+                            <option value="">All Dates</option>
+                            <option value="overdue">Overdue</option>
+                            <option value="today">Due Today</option>
+                            <option value="week">Due This Week</option>
+                            <option value="month">Due This Month</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="button" class="btn btn-outline-secondary" onclick="clearFilters()">
+                            <i class="bi bi-x-circle me-1"></i>Clear Filters
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Assignments Table -->
             <div th:if="${assignments != null and !assignments.empty}">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h3 class="mb-0">
-                        <i class="bi bi-list-task me-2"></i>
-                        Assignments
+                        <i class="bi bi-table me-2"></i>
+                        Assignments by Course
                     </h3>
                     <small class="text-muted">
                         <i class="bi bi-arrow-clockwise me-1"></i>
-                        Last synced: <span
-                            th:text="${#temporals.format(#temporals.createNow(), 'MMM dd, yyyy HH:mm')}"></span>
+                        Last synced: <span th:text="${#temporals.format(#temporals.createNow(), 'MMM dd, yyyy HH:mm')}"></span>
                     </small>
                 </div>
 
-                <!-- Assignment Cards -->
-                <div th:each="assignment : ${assignments}" class="assignment-card">
-                    <div class="assignment-header">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div class="flex-grow-1">
-                                <div class="assignment-title" th:text="${assignment.assignmentTitle}">Assignment Title
-                                </div>
-                                <div class="course-name" th:if="${assignment.contextName}"
-                                    th:text="${assignment.contextName}">Course Name</div>
-                            </div>
-                            <span class="badge status-badge" th:classappend="${assignment.getStatusBadgeClass()}"
-                                th:text="${#strings.capitalize(assignment.getStatus())}">
-                                Status
-                            </span>
-                        </div>
-                    </div>
-
-                    <div class="assignment-body">
-                        <div class="assignment-details">
-                            <!-- Due Date -->
-                            <div class="detail-item" th:if="${assignment.dueAt}">
-                                <i class="bi bi-calendar-event text-muted"></i>
-                                <span
-                                    th:class="${(assignment.getStatus() == 'overdue' or assignment.getStatus() == 'missing') ? 'overdue' : 'due-date'}"
-                                    th:text="${'Due: ' + #temporals.format(assignment.dueAt, 'MMM dd, yyyy HH:mm')}">
-                                    Due Date
-                                </span>
-                            </div>
-
-                            <!-- No Due Date -->
-                            <div class="detail-item" th:unless="${assignment.dueAt}">
-                                <i class="bi bi-calendar-x text-muted"></i>
-                                <span class="text-muted">No due date</span>
-                            </div>
-
-                            <!-- Points Possible -->
-                            <div class="detail-item" th:if="${assignment.pointsPossible}">
-                                <i class="bi bi-trophy text-muted"></i>
-                                <span th:text="${assignment.pointsPossible + ' pts'}">Points</span>
-                            </div>
-
-                            <!-- Current Grade -->
-                            <div class="detail-item" th:if="${assignment.currentGrade}">
-                                <i class="bi bi-percent text-muted"></i>
-                                <span class="grade-display"
-                                    th:text="${assignment.currentGrade + (assignment.pointsPossible ? '/' + assignment.pointsPossible : '') + ' pts'}">
-                                    Grade
-                                </span>
-                            </div>
-
-                            <!-- No Grade Yet -->
-                            <div class="detail-item" th:unless="${assignment.currentGrade}">
-                                <i class="bi bi-dash-circle text-muted"></i>
-                                <span class="text-muted">Not graded</span>
-                            </div>
-                        </div>
+                <!-- Course Groups -->
+                <div th:each="courseEntry : ${assignmentsByCourse}" class="course-group">
+                    <div class="course-header" th:text="${courseEntry.key}">Course Name</div>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Assignment</th>
+                                    <th>Due Date</th>
+                                    <th>Points</th>
+                                    <th>Grade</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="assignment : ${courseEntry.value}" 
+                                    th:attr="data-course=${assignment.contextName}, data-status=${assignment.status}, data-due=${assignment.dueAt}">
+                                    <td>
+                                        <a href="#" class="assignment-link" 
+                                           th:onclick="'showAssignmentDetails(' + ${studentId} + ', ' + ${assignment.plannableId} + ')'"
+                                           th:text="${assignment.assignmentTitle}">Assignment Title</a>
+                                    </td>
+                                    <td>
+                                        <span th:if="${assignment.dueAt}" 
+                                              th:class="${(assignment.status == 'overdue' or assignment.status == 'missing') ? 'text-danger fw-bold' : 'text-muted'}"
+                                              th:text="${#temporals.format(assignment.dueAt, 'MMM dd, yyyy HH:mm')}">
+                                            Due Date
+                                        </span>
+                                        <span th:unless="${assignment.dueAt}" class="text-muted">No due date</span>
+                                    </td>
+                                    <td>
+                                        <span th:if="${assignment.pointsPossible}" th:text="${assignment.pointsPossible + ' pts'}">Points</span>
+                                        <span th:unless="${assignment.pointsPossible}" class="text-muted">-</span>
+                                    </td>
+                                    <td>
+                                        <span th:if="${assignment.currentGrade}" 
+                                              class="fw-bold"
+                                              th:text="${assignment.currentGrade + (assignment.pointsPossible ? '/' + assignment.pointsPossible : '') + ' pts'}">
+                                            Grade
+                                        </span>
+                                        <span th:unless="${assignment.currentGrade}" class="text-muted">Not graded</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge" 
+                                              th:classappend="${assignment.statusBadgeClass ?: assignment.getStatusBadgeClass()}"
+                                              th:text="${#strings.capitalize(assignment.status ?: assignment.getStatus())}">
+                                            Status
+                                        </span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -324,7 +297,152 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-</body>
+    <!-- Assignment Details Modal -->
+    <div class="modal fade" id="assignmentModal" tabindex="-1" aria-labelledby="assignmentModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="assignmentModalLabel">Assignment Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="assignmentModalBody">
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Filter functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const courseFilter = document.getElementById('courseFilter');
+            const statusFilter = document.getElementById('statusFilter');
+            const dateFilter = document.getElementById('dateFilter');
+            
+            function applyFilters() {
+                const courseValue = courseFilter.value.toLowerCase();
+                const statusValue = statusFilter.value.toLowerCase();
+                const dateValue = dateFilter.value;
+                
+                const courseGroups = document.querySelectorAll('.course-group');
+                
+                courseGroups.forEach(group => {
+                    const courseName = group.querySelector('.course-header').textContent.toLowerCase();
+                    const rows = group.querySelectorAll('tbody tr');
+                    let visibleRows = 0;
+                    
+                    rows.forEach(row => {
+                        const rowCourse = row.getAttribute('data-course')?.toLowerCase() || '';
+                        const rowStatus = row.getAttribute('data-status')?.toLowerCase() || '';
+                        const rowDueDate = row.getAttribute('data-due');
+                        
+                        let showRow = true;
+                        
+                        // Course filter
+                        if (courseValue && !courseName.includes(courseValue)) {
+                            showRow = false;
+                        }
+                        
+                        // Status filter
+                        if (statusValue && rowStatus !== statusValue) {
+                            showRow = false;
+                        }
+                        
+                        // Date filter
+                        if (dateValue && rowDueDate) {
+                            const dueDate = new Date(rowDueDate);
+                            const now = new Date();
+                            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                            const weekFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+                            const monthFromNow = new Date(today.getFullYear(), today.getMonth() + 1, today.getDate());
+                            
+                            switch(dateValue) {
+                                case 'overdue':
+                                    if (dueDate >= now) showRow = false;
+                                    break;
+                                case 'today':
+                                    if (dueDate < today || dueDate >= new Date(today.getTime() + 24 * 60 * 60 * 1000)) showRow = false;
+                                    break;
+                                case 'week':
+                                    if (dueDate < now || dueDate > weekFromNow) showRow = false;
+                                    break;
+                                case 'month':
+                                    if (dueDate < now || dueDate > monthFromNow) showRow = false;
+                                    break;
+                            }
+                        }
+                        
+                        if (showRow) {
+                            row.style.display = '';
+                            visibleRows++;
+                        } else {
+                            row.style.display = 'none';
+                        }
+                    });
+                    
+                    // Hide course group if no visible rows
+                    if (visibleRows === 0) {
+                        group.style.display = 'none';
+                    } else {
+                        group.style.display = '';
+                    }
+                });
+            }
+            
+            courseFilter.addEventListener('change', applyFilters);
+            statusFilter.addEventListener('change', applyFilters);
+            dateFilter.addEventListener('change', applyFilters);
+        });
+        
+        function clearFilters() {
+            document.getElementById('courseFilter').value = '';
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('dateFilter').value = '';
+            
+            // Show all rows and groups
+            document.querySelectorAll('.course-group').forEach(group => {
+                group.style.display = '';
+                group.querySelectorAll('tbody tr').forEach(row => {
+                    row.style.display = '';
+                });
+            });
+        }
+        
+        function showAssignmentDetails(studentId, assignmentId) {
+            const modal = new bootstrap.Modal(document.getElementById('assignmentModal'));
+            const modalBody = document.getElementById('assignmentModalBody');
+            
+            // Show loading spinner
+            modalBody.innerHTML = `
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            `;
+            
+            modal.show();
+            
+            // Load assignment details
+            fetch(`/students/${studentId}/assignments/${assignmentId}`)
+                .then(response => response.text())
+                .then(html => {
+                    modalBody.innerHTML = html;
+                })
+                .catch(error => {
+                    modalBody.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            Error loading assignment details. Please try again.
+                        </div>
+                    `;
+                });
+        }
+    </script>
+</body>
 </html>
