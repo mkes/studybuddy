@@ -39,7 +39,7 @@
   - Write unit tests for business logic and status calculations
   - _Requirements: 3.2, 3.4, 3.5, 4.1, 4.2_
 
-- [ ] 7. Build authentication controller and login flow
+- [x] 7. Build authentication controller and login flow
   - Implement AuthController with GET / for login page and POST /login for authentication
   - Create login.html Thymeleaf template with Canvas token input form
   - Add Canvas token validation and session management
