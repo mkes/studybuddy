@@ -32,7 +32,7 @@
   - Write integration tests for repository methods with embedded database
   - _Requirements: 4.3, 3.3, 5.3_
 
-- [ ] 6. Implement assignment service with business logic
+- [x] 6. Implement assignment service with business logic
   - Create AssignmentService with syncAssignments and getAssignmentsByStudent methods
   - Implement assignment status calculation logic (submitted, missing, late, overdue, pending)
   - Add date range filtering with default Aug 1 - Sep 30, 2025 range
