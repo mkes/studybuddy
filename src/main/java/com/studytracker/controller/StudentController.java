@@ -147,10 +147,24 @@ public class StudentController {
                     .findFirst()
                     .orElse(null);
             
+            // Calculate assignment statistics
+            long submittedCount = assignments.stream()
+                    .filter(assignment -> "submitted".equals(assignment.getStatus()))
+                    .count();
+            long pendingCount = assignments.stream()
+                    .filter(assignment -> "pending".equals(assignment.getStatus()))
+                    .count();
+            long missingOverdueCount = assignments.stream()
+                    .filter(assignment -> "missing".equals(assignment.getStatus()) || "overdue".equals(assignment.getStatus()))
+                    .count();
+            
             model.addAttribute("studentId", studentId);
             model.addAttribute("student", currentStudent);
             model.addAttribute("assignments", assignments);
             model.addAttribute("assignmentCount", assignments.size());
+            model.addAttribute("submittedCount", submittedCount);
+            model.addAttribute("pendingCount", pendingCount);
+            model.addAttribute("missingOverdueCount", missingOverdueCount);
             
             if (assignments.isEmpty()) {
                 model.addAttribute("message", "No assignments found for the current date range (Aug 1 - Sep 30, 2025).");

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,14 +13,17 @@
             margin: 30px auto;
             padding: 30px;
         }
+
         .logo {
             text-align: center;
             margin-bottom: 30px;
         }
+
         .logo h1 {
             color: #007bff;
             font-weight: bold;
         }
+
         .student-header {
             background: linear-gradient(135deg, #007bff, #0056b3);
             color: white;
@@ -27,89 +31,110 @@
             border-radius: 10px;
             margin-bottom: 30px;
         }
+
         .assignment-card {
             border: 1px solid #dee2e6;
             border-radius: 8px;
             margin-bottom: 15px;
             transition: box-shadow 0.2s ease;
         }
+
         .assignment-card:hover {
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
+
         .assignment-header {
             background-color: #f8f9fa;
             padding: 15px;
             border-bottom: 1px solid #dee2e6;
             border-radius: 8px 8px 0 0;
         }
+
         .assignment-body {
             padding: 15px;
         }
+
         .assignment-title {
             font-weight: 600;
             color: #333;
             margin-bottom: 5px;
         }
+
         .course-name {
             color: #6c757d;
             font-size: 0.9em;
             margin-bottom: 10px;
         }
+
         .assignment-details {
             display: flex;
             flex-wrap: wrap;
             gap: 15px;
             align-items: center;
         }
+
         .detail-item {
             display: flex;
             align-items: center;
             gap: 5px;
             font-size: 0.9em;
         }
+
         .badge-success {
             background-color: #28a745 !important;
         }
+
         .badge-danger {
             background-color: #dc3545 !important;
         }
+
         .badge-warning {
             background-color: #ffc107 !important;
             color: #212529 !important;
         }
+
         .badge-primary {
             background-color: #007bff !important;
         }
+
         .badge-secondary {
             background-color: #6c757d !important;
         }
+
         .status-badge {
             font-size: 0.8em;
             padding: 4px 8px;
             border-radius: 12px;
         }
+
         .grade-display {
             font-weight: 600;
         }
+
         .due-date {
             color: #495057;
         }
+
         .overdue {
             color: #dc3545;
             font-weight: 600;
         }
+
         .loading-spinner {
             text-align: center;
             padding: 40px;
         }
+
         .empty-state {
             text-align: center;
             padding: 60px 20px;
             color: #6c757d;
         }
+
         .stats-row {
             margin-bottom: 20px;
         }
+
         .stat-card {
             background: white;
             border: 1px solid #dee2e6;
@@ -117,17 +142,20 @@
             padding: 15px;
             text-align: center;
         }
+
         .stat-number {
             font-size: 1.5em;
             font-weight: bold;
             color: #007bff;
         }
+
         .stat-label {
             color: #6c757d;
             font-size: 0.9em;
         }
     </style>
 </head>
+
 <body class="bg-light">
     <div class="container">
         <div class="dashboard-container">
@@ -168,7 +196,8 @@
             </div>
 
             <!-- Info message display -->
-            <div th:if="${message != null and messageType == 'info'}" class="alert alert-info alert-dismissible fade show" role="alert">
+            <div th:if="${message != null and messageType == 'info'}"
+                class="alert alert-info alert-dismissible fade show" role="alert">
                 <i class="bi bi-info-circle-fill me-2"></i>
                 <span th:text="${message}"></span>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -185,19 +214,19 @@
                     </div>
                     <div class="col-md-3">
                         <div class="stat-card">
-                            <div class="stat-number text-success" th:text="${#lists.size(#lists.select(assignments, assignment.status == 'submitted'))}">0</div>
+                            <div class="stat-number text-success" th:text="${submittedCount ?: 0}">0</div>
                             <div class="stat-label">Submitted</div>
                         </div>
                     </div>
                     <div class="col-md-3">
                         <div class="stat-card">
-                            <div class="stat-number text-warning" th:text="${#lists.size(#lists.select(assignments, assignment.status == 'pending'))}">0</div>
+                            <div class="stat-number text-warning" th:text="${pendingCount ?: 0}">0</div>
                             <div class="stat-label">Pending</div>
                         </div>
                     </div>
                     <div class="col-md-3">
                         <div class="stat-card">
-                            <div class="stat-number text-danger" th:text="${#lists.size(#lists.select(assignments, assignment.status == 'missing' or assignment.status == 'overdue'))}">0</div>
+                            <div class="stat-number text-danger" th:text="${missingOverdueCount ?: 0}">0</div>
                             <div class="stat-label">Missing/Overdue</div>
                         </div>
                     </div>
@@ -213,7 +242,8 @@
                     </h3>
                     <small class="text-muted">
                         <i class="bi bi-arrow-clockwise me-1"></i>
-                        Last synced: <span th:text="${#temporals.format(#temporals.createNow(), 'MMM dd, yyyy HH:mm')}"></span>
+                        Last synced: <span
+                            th:text="${#temporals.format(#temporals.createNow(), 'MMM dd, yyyy HH:mm')}"></span>
                     </small>
                 </div>
 
@@ -222,49 +252,51 @@
                     <div class="assignment-header">
                         <div class="d-flex justify-content-between align-items-start">
                             <div class="flex-grow-1">
-                                <div class="assignment-title" th:text="${assignment.assignmentTitle}">Assignment Title</div>
-                                <div class="course-name" th:if="${assignment.contextName}" th:text="${assignment.contextName}">Course Name</div>
+                                <div class="assignment-title" th:text="${assignment.assignmentTitle}">Assignment Title
+                                </div>
+                                <div class="course-name" th:if="${assignment.contextName}"
+                                    th:text="${assignment.contextName}">Course Name</div>
                             </div>
-                            <span class="badge status-badge" 
-                                  th:classappend="${assignment.statusBadgeClass ?: assignment.getStatusBadgeClass()}"
-                                  th:text="${#strings.capitalize(assignment.status ?: assignment.getStatus())}">
+                            <span class="badge status-badge" th:classappend="${assignment.getStatusBadgeClass()}"
+                                th:text="${#strings.capitalize(assignment.getStatus())}">
                                 Status
                             </span>
                         </div>
                     </div>
-                    
+
                     <div class="assignment-body">
                         <div class="assignment-details">
                             <!-- Due Date -->
                             <div class="detail-item" th:if="${assignment.dueAt}">
                                 <i class="bi bi-calendar-event text-muted"></i>
-                                <span th:class="${(assignment.status == 'overdue' or assignment.status == 'missing') ? 'overdue' : 'due-date'}"
-                                      th:text="${'Due: ' + #temporals.format(assignment.dueAt, 'MMM dd, yyyy HH:mm')}">
+                                <span
+                                    th:class="${(assignment.getStatus() == 'overdue' or assignment.getStatus() == 'missing') ? 'overdue' : 'due-date'}"
+                                    th:text="${'Due: ' + #temporals.format(assignment.dueAt, 'MMM dd, yyyy HH:mm')}">
                                     Due Date
                                 </span>
                             </div>
-                            
+
                             <!-- No Due Date -->
                             <div class="detail-item" th:unless="${assignment.dueAt}">
                                 <i class="bi bi-calendar-x text-muted"></i>
                                 <span class="text-muted">No due date</span>
                             </div>
-                            
+
                             <!-- Points Possible -->
                             <div class="detail-item" th:if="${assignment.pointsPossible}">
                                 <i class="bi bi-trophy text-muted"></i>
                                 <span th:text="${assignment.pointsPossible + ' pts'}">Points</span>
                             </div>
-                            
+
                             <!-- Current Grade -->
                             <div class="detail-item" th:if="${assignment.currentGrade}">
                                 <i class="bi bi-percent text-muted"></i>
-                                <span class="grade-display" 
-                                      th:text="${assignment.currentGrade + (assignment.pointsPossible ? '/' + assignment.pointsPossible : '') + ' pts'}">
+                                <span class="grade-display"
+                                    th:text="${assignment.currentGrade + (assignment.pointsPossible ? '/' + assignment.pointsPossible : '') + ' pts'}">
                                     Grade
                                 </span>
                             </div>
-                            
+
                             <!-- No Grade Yet -->
                             <div class="detail-item" th:unless="${assignment.currentGrade}">
                                 <i class="bi bi-dash-circle text-muted"></i>
@@ -294,4 +326,5 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
+
 </html>
