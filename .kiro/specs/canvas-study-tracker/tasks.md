@@ -6,7 +6,7 @@
   - Set up application properties with database and Canvas API configuration
   - _Requirements: 6.1_
 
-- [ ] 2. Create core data models and database schema
+- [x] 2. Create core data models and database schema
   - Implement PlannerItem JPA entity with all required fields and annotations
   - Create database migration scripts for planner_items table with indexes
   - Write unit tests for PlannerItem entity validation and constraints
