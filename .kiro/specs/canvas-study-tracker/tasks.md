@@ -55,7 +55,7 @@
   - Write controller tests for student retrieval and selection flow
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
 
-- [ ] 9. Build student dashboard controller with assignment display
+- [x] 9. Build student dashboard controller with assignment display
   - Implement GET /students/{studentId} endpoint in StudentController
   - Create student-dashboard.html Thymeleaf template for assignment display
   - Add automatic assignment sync trigger on dashboard page load

@@ -1,7 +1,9 @@
 package com.studytracker.controller;
 
 import com.studytracker.dto.StudentDto;
+import com.studytracker.model.PlannerItem;
 import com.studytracker.service.CanvasApiService;
+import com.studytracker.service.AssignmentService;
 import com.studytracker.exception.CanvasApiException;
 import com.studytracker.exception.InvalidTokenException;
 import com.studytracker.exception.InsufficientPermissionsException;
@@ -27,6 +29,9 @@ public class StudentController {
 
     @Autowired
     private CanvasApiService canvasApiService;
+    
+    @Autowired
+    private AssignmentService assignmentService;
 
     /**
      * Display the student selection page with a dropdown of observed students.
@@ -96,8 +101,8 @@ public class StudentController {
     }
 
     /**
-     * Display the dashboard for a specific student.
-     * This endpoint will be implemented in a future task to show assignment details.
+     * Display the dashboard for a specific student with assignments.
+     * Automatically syncs assignments from Canvas API and displays them with status badges.
      * 
      * @param studentId Canvas user ID of the student
      * @param session HTTP session containing the Canvas API token
@@ -118,12 +123,73 @@ public class StudentController {
             return "redirect:/";
         }
 
-        // TODO: This will be implemented in task 9 - Build student dashboard controller with assignment display
         log.debug("Student dashboard requested for student ID: {}", studentId);
-        model.addAttribute("studentId", studentId);
-        model.addAttribute("message", "Student dashboard will be implemented in the next task.");
-        model.addAttribute("messageType", "info");
         
-        return "student-dashboard";
+        try {
+            // Automatically sync assignments from Canvas API
+            log.debug("Starting automatic assignment sync for student {}", studentId);
+            List<PlannerItem> assignments = assignmentService.syncAssignments(studentId, canvasToken);
+            
+            // Add assignment status information for each assignment
+            assignments.forEach(assignment -> {
+                String status = assignmentService.calculateAssignmentStatus(assignment);
+                assignment.setStatus(status);
+                assignment.setStatusBadgeClass(assignmentService.getStatusBadgeClass(status));
+            });
+            
+            log.info("Successfully loaded dashboard for student {} with {} assignments", 
+                    studentId, assignments.size());
+            
+            // Get student information for display
+            List<StudentDto> students = canvasApiService.getObservedStudents(canvasToken);
+            StudentDto currentStudent = students.stream()
+                    .filter(student -> student.getId().equals(studentId))
+                    .findFirst()
+                    .orElse(null);
+            
+            model.addAttribute("studentId", studentId);
+            model.addAttribute("student", currentStudent);
+            model.addAttribute("assignments", assignments);
+            model.addAttribute("assignmentCount", assignments.size());
+            
+            if (assignments.isEmpty()) {
+                model.addAttribute("message", "No assignments found for the current date range (Aug 1 - Sep 30, 2025).");
+                model.addAttribute("messageType", "info");
+            }
+            
+            return "student-dashboard";
+            
+        } catch (InvalidTokenException e) {
+            log.warn("Invalid token encountered while loading dashboard for student {}", studentId, e);
+            session.invalidate(); // Clear invalid session
+            redirectAttributes.addFlashAttribute("error", "Your Canvas token has expired. Please log in again.");
+            return "redirect:/";
+            
+        } catch (InsufficientPermissionsException e) {
+            log.warn("Insufficient permissions to access student {} dashboard", studentId, e);
+            redirectAttributes.addFlashAttribute("error", "You do not have permission to view this student's information.");
+            return "redirect:/students";
+            
+        } catch (CanvasUnavailableException e) {
+            log.error("Canvas API unavailable while loading dashboard for student {}", studentId, e);
+            model.addAttribute("error", "Canvas is currently unavailable. Please try again later.");
+            model.addAttribute("studentId", studentId);
+            model.addAttribute("assignments", List.of()); // Empty list to prevent template errors
+            return "student-dashboard";
+            
+        } catch (CanvasApiException e) {
+            log.error("Canvas API error while loading dashboard for student {}", studentId, e);
+            model.addAttribute("error", "Unable to retrieve assignment data from Canvas. Please try again later.");
+            model.addAttribute("studentId", studentId);
+            model.addAttribute("assignments", List.of()); // Empty list to prevent template errors
+            return "student-dashboard";
+            
+        } catch (Exception e) {
+            log.error("Unexpected error while loading dashboard for student {}", studentId, e);
+            model.addAttribute("error", "An unexpected error occurred while loading the dashboard. Please try again later.");
+            model.addAttribute("studentId", studentId);
+            model.addAttribute("assignments", List.of()); // Empty list to prevent template errors
+            return "student-dashboard";
+        }
     }
 }

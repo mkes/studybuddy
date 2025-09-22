@@ -94,6 +94,13 @@ public class PlannerItem {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    // Transient fields for UI display
+    @Transient
+    private String status;
+
+    @Transient
+    private String statusBadgeClass;
+
     /**
      * Calculates the assignment status based on submission and grading flags.
      * 
