@@ -12,7 +12,7 @@
   - Write unit tests for PlannerItem entity validation and constraints
   - _Requirements: 4.3, 6.4_
 
-- [ ] 3. Implement Canvas API DTOs and mapping utilities
+- [x] 3. Implement Canvas API DTOs and mapping utilities
   - Create StudentDto and AssignmentDto classes for Canvas API responses
   - Implement mapper utilities to convert Canvas API responses to internal models
   - Write unit tests for DTO mapping and data transformation
