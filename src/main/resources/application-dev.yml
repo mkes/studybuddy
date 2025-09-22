@@ -1,0 +1,27 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/studytracker_dev
+    username: studytracker
+    password: password
+  
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+  
+  thymeleaf:
+    cache: false
+
+server:
+  port: 8080
+
+canvas:
+  api:
+    base-url: https://canvas.instructure.com/api/v1
+    timeout: 30000
+
+logging:
+  level:
+    com.studytracker: DEBUG
+    org.springframework.web: DEBUG
+    org.hibernate.SQL: DEBUG

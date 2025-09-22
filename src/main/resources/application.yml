@@ -1,0 +1,43 @@
+spring:
+  application:
+    name: study-tracker
+  
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/studytracker}
+    username: ${DATABASE_USERNAME:studytracker}
+    password: ${DATABASE_PASSWORD:password}
+    driver-class-name: org.postgresql.Driver
+  
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+  
+  thymeleaf:
+    cache: false
+    prefix: classpath:/templates/
+    suffix: .html
+
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+canvas:
+  api:
+    base-url: ${CANVAS_API_BASE_URL:https://canvas.instructure.com/api/v1}
+    timeout: ${CANVAS_API_TIMEOUT:30000}
+    rate-limit:
+      requests-per-second: ${CANVAS_RATE_LIMIT:10}
+
+logging:
+  level:
+    com.studytracker: INFO
+    org.springframework.web: DEBUG
+    org.hibernate.SQL: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"

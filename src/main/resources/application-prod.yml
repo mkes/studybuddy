@@ -1,0 +1,15 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+  
+  thymeleaf:
+    cache: true
+
+logging:
+  level:
+    com.studytracker: INFO
+    org.springframework.web: WARN
+    org.hibernate.SQL: WARN
+    root: WARN
