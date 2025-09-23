@@ -72,14 +72,22 @@
   - Write API tests for sync endpoint and JSON response format
   - _Requirements: 4.1, 4.2, 4.4, 5.2_
 
-- [ ] 11. Add responsive UI styling and mobile support
+- [x] 11. Enhance grade mapping with Canvas submissions API integration
+  - Update CanvasApiService to add getStudentSubmissions method for detailed grade data
+  - Modify AssignmentService to map plannable_id from planner items to assignment_id in submissions
+  - Implement grade synchronization using entered_score field from submissions API response
+  - Update sync process to fetch both planner items and submissions data for accurate grades
+  - Write unit tests for grade mapping logic and submissions API integration
+  - _Requirements: 3.6, 4.2, 4.6_
+
+- [ ] 12. Add responsive UI styling and mobile support
   - Implement responsive CSS for mobile and desktop compatibility
   - Style assignment cards with proper status badge colors and layout
   - Add Bootstrap or similar framework for consistent responsive design
   - Test mobile interface rendering and usability
   - _Requirements: 5.4, 6.5_
 
-- [ ] 12. Implement comprehensive error handling and logging
+- [ ] 13. Implement comprehensive error handling and logging
   - Create custom exception classes (CanvasApiException, ApplicationException)
   - Add global exception handler with user-friendly error pages
   - Implement logging for Canvas API requests, database operations, and errors
@@ -87,7 +95,7 @@
   - Write tests for error scenarios and exception handling
   - _Requirements: 6.2, 6.3, 6.4, 5.5_
 
-- [ ] 13. Add performance optimizations and caching
+- [ ] 14. Add performance optimizations and caching
   - Implement HTTP client connection pooling for Canvas API calls
   - Add database query optimization with proper indexing
   - Implement bulk operations for assignment synchronization
@@ -95,7 +103,7 @@
   - Write performance tests for assignment loading and sync operations
   - _Requirements: 5.1, 5.2, 5.3, 4.2_
 
-- [ ] 14. Configure security and CORS settings
+- [ ] 15. Configure security and CORS settings
   - Set up CORS configuration for development (localhost) and production
   - Implement secure session management and token storage
   - Add input validation for all user inputs and API parameters
@@ -103,7 +111,7 @@
   - Write security tests for authentication and data protection
   - _Requirements: 6.1, 6.5, 1.4, 1.5_
 
-- [ ] 15. Create integration tests for complete user workflows
+- [ ] 16. Create integration tests for complete user workflows
   - Write end-to-end tests for login → student selection → dashboard flow
   - Test automatic assignment sync and data display functionality
   - Add tests for error scenarios (invalid tokens, Canvas downtime)

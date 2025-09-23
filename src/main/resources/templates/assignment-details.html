@@ -45,14 +45,13 @@
                     </h6>
                     <p class="card-text">
                         <strong>Points Possible:</strong> 
-                        <span th:if="${assignment.pointsPossible}" th:text="${assignment.pointsPossible + ' pts'}">Points</span>
-                        <span th:unless="${assignment.pointsPossible}" class="text-muted">Not specified</span>
+                        <span th:text="${assignment.formattedPointsPossible}">Points</span>
                     </p>
                     <p class="card-text">
                         <strong>Current Grade:</strong>
                         <span th:if="${assignment.currentGrade}" 
                               class="fw-bold text-success"
-                              th:text="${assignment.currentGrade + (assignment.pointsPossible ? '/' + assignment.pointsPossible : '') + ' pts'}">
+                              th:text="${assignment.formattedGrade}">
                             Grade
                         </span>
                         <span th:unless="${assignment.currentGrade}" class="text-muted">Not graded yet</span>

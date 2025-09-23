@@ -3,6 +3,7 @@ package com.studytracker.service;
 import com.studytracker.dto.AssignmentDto;
 import com.studytracker.dto.PlannerItemDto;
 import com.studytracker.dto.StudentDto;
+import com.studytracker.dto.SubmissionDto;
 import com.studytracker.exception.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -195,6 +196,51 @@ public class CanvasApiService {
         } catch (NumberFormatException ex) {
             log.warn("Invalid Retry-After header value", ex);
             return 60;
+        }
+    }
+
+    /**
+     * Retrieves detailed submission data for a student from a specific course.
+     * This provides accurate grade information including entered_score and entered_grade.
+     * 
+     * @param token Canvas API token
+     * @param courseId Canvas course ID
+     * @param studentId Canvas user ID of the student
+     * @return List of submission data for the student in the course
+     * @throws InvalidTokenException if token is invalid
+     * @throws InsufficientPermissionsException if token lacks permissions
+     * @throws CanvasApiException for other API errors
+     */
+    public List<SubmissionDto> getStudentSubmissions(String token, Long courseId, Long studentId) {
+        log.debug("Fetching submissions for student {} in course {}", studentId, courseId);
+        
+        try {
+            List<SubmissionDto> submissions = webClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/api/v1/courses/{courseId}/students/submissions")
+                            .queryParam("student_ids[]", studentId)
+                            .queryParam("include[]", "submission_comments")
+                            .queryParam("per_page", 100)
+                            .build(courseId))
+                    .header("Authorization", "Bearer " + token)
+                    .retrieve()
+                    .bodyToMono(new ParameterizedTypeReference<List<SubmissionDto>>() {})
+                    .timeout(Duration.ofSeconds(20))
+                    .retryWhen(Retry.backoff(3, Duration.ofSeconds(2))
+                            .filter(this::isRetryableException))
+                    .block();
+            
+            log.debug("Successfully fetched {} submissions for student {} in course {}", 
+                     submissions != null ? submissions.size() : 0, studentId, courseId);
+            return submissions != null ? submissions : List.of();
+            
+        } catch (WebClientResponseException e) {
+            handleWebClientException(e);
+            return List.of();
+        } catch (Exception e) {
+            log.error("Unexpected error fetching submissions for student {} in course {}", 
+                     studentId, courseId, e);
+            throw new CanvasApiException("Failed to fetch student submissions", e);
         }
     }
 

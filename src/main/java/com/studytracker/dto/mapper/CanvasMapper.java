@@ -43,6 +43,7 @@ public class CanvasMapper {
                 .plannableId(plannerItemDto.getPlannableId())
                 .assignmentTitle(plannerItemDto.getPlannable() != null ? plannerItemDto.getPlannable().getTitle() : null)
                 .contextName(plannerItemDto.getContextName())
+                .courseId(plannerItemDto.getCourseId())
                 .dueAt(plannerItemDto.getPlannable() != null ? plannerItemDto.getPlannable().getDueAt() : plannerItemDto.getPlannableDate())
                 .pointsPossible(plannerItemDto.getPlannable() != null ? 
                     (plannerItemDto.getPlannable().getPointsPossible() != null ? 

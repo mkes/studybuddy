@@ -32,27 +32,29 @@ StudyTracker is a web application that integrates with Canvas LMS to help parent
 
 ### Requirement 3
 
-**User Story:** As a parent/observer, I want to view my student's assignments with grades and status, so that I can monitor their academic progress and identify areas needing attention.
+**User Story:** As a parent/observer, I want to view my student's assignments with accurate grades and status, so that I can monitor their academic progress and identify areas needing attention.
 
 #### Acceptance Criteria
 
-1. WHEN a user accesses a student dashboard THEN the system SHALL automatically fetch and display assignments with grades
+1. WHEN a user accesses a student dashboard THEN the system SHALL automatically fetch and display assignments with accurate grades from Canvas submissions API
 2. WHEN assignments are displayed THEN the system SHALL show assignment title, course name, due date, points possible, current grade, and status
 3. WHEN assignments are listed THEN the system SHALL order them chronologically in descending order (newest first)
 4. WHEN displaying assignment status THEN the system SHALL show visual badges: Submitted (Green), Missing (Red), Late (Yellow), Overdue (Red), Pending (Blue)
 5. WHEN a user wants to filter assignments THEN the system SHALL support date range filtering with default range of Aug 1 - Sep 30, 2025
+6. WHEN fetching grades THEN the system SHALL map planner item plannable_id to submissions API assignment_id to get accurate entered_score and entered_grade values
 
 ### Requirement 4
 
-**User Story:** As a parent/observer, I want the system to automatically sync assignment data, so that I always see the most current information without manual intervention.
+**User Story:** As a parent/observer, I want the system to automatically sync assignment data with accurate grades, so that I always see the most current information without manual intervention.
 
 #### Acceptance Criteria
 
-1. WHEN a student dashboard loads THEN the system SHALL automatically sync assignments and grades from Canvas API
-2. WHEN syncing data THEN the system SHALL retrieve assignments and grades in a single Canvas API call for performance
-3. WHEN assignment data is retrieved THEN the system SHALL cache it in the local PostgreSQL database
+1. WHEN a student dashboard loads THEN the system SHALL automatically sync assignments and grades from Canvas API using both planner and submissions endpoints
+2. WHEN syncing data THEN the system SHALL first retrieve planner items, then fetch detailed grades from submissions API using plannable_id to assignment_id mapping
+3. WHEN assignment data is retrieved THEN the system SHALL cache it in the local PostgreSQL database with accurate entered_score and entered_grade values
 4. WHEN Canvas API rate limiting occurs THEN the system SHALL handle it gracefully without crashing
 5. WHEN sync completes THEN the system SHALL display updated assignment information within 10 seconds
+6. WHEN mapping grades THEN the system SHALL use submissions API entered_score field to populate current_grade in the database
 
 ### Requirement 5
 

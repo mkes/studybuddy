@@ -71,25 +71,29 @@ StudyTracker is a Spring Boot web application that provides parents and observer
 - **Purpose**: Interface with Canvas LMS API
 - **Methods**:
   - `getObservedStudents(token)` - Retrieve list of observed students
-  - `getStudentAssignments(token, studentId, dateRange)` - Fetch assignments with grades
+  - `getStudentPlannerItems(token, studentId, dateRange)` - Fetch planner items from /api/v1/users/{userId}/planner/items
+  - `getStudentSubmissions(token, courseId, studentId)` - Fetch detailed grades from /api/v1/courses/{courseId}/students/submissions
   - `validateToken(token)` - Verify Canvas API token validity
 - **Responsibilities**:
   - HTTP client management for Canvas API
   - Bearer token authentication
   - Rate limiting and error handling
   - Response parsing and mapping
+  - Mapping plannable_id from planner items to assignment_id in submissions for accurate grade retrieval
 
 #### AssignmentService
 - **Purpose**: Business logic for assignment management
 - **Methods**:
-  - `syncAssignments(studentId, token)` - Orchestrate sync process
+  - `syncAssignments(studentId, token)` - Orchestrate sync process using both planner and submissions APIs
   - `getAssignmentsByStudent(studentId, dateRange)` - Retrieve cached assignments
   - `calculateAssignmentStatus(assignment)` - Determine status badges
+  - `mapGradesToAssignments(plannerItems, submissions)` - Map entered_score from submissions to planner items using plannable_id/assignment_id relationship
 - **Responsibilities**:
-  - Assignment data processing
+  - Assignment data processing with accurate grade mapping
   - Status calculation logic
   - Date range filtering
   - Cache management coordination
+  - Grade synchronization between planner items and submissions data
 
 ### Repository Layer
 

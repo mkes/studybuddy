@@ -2,6 +2,7 @@ package com.studytracker.service;
 
 import com.studytracker.dto.AssignmentDto;
 import com.studytracker.dto.PlannerItemDto;
+import com.studytracker.dto.SubmissionDto;
 import com.studytracker.dto.mapper.CanvasMapper;
 import com.studytracker.model.PlannerItem;
 import com.studytracker.repository.PlannerItemRepository;
@@ -15,6 +16,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -79,8 +81,17 @@ public class AssignmentService {
             log.debug("Converted {} assignments from planner items for student {}", 
                      assignmentDtos.size(), studentId);
 
+            // Fetch detailed grade information from submissions API
+            Map<Long, SubmissionDto> submissionsMap = fetchSubmissionsForAssignments(
+                    token, studentId, assignmentDtos);
+            
+            log.debug("Fetched {} submissions for grade mapping", submissionsMap.size());
+
+            // Map accurate grades from submissions to assignments
+            List<AssignmentDto> enhancedAssignments = mapGradesToAssignments(assignmentDtos, submissionsMap);
+
             // Convert DTOs to entities
-            List<PlannerItem> newAssignments = canvasMapper.toPlannerItems(assignmentDtos, studentId);
+            List<PlannerItem> newAssignments = canvasMapper.toPlannerItems(enhancedAssignments, studentId);
 
             // Get existing assignments for the date range
             LocalDateTime startDateTime = startDate.atStartOfDay();
@@ -280,5 +291,81 @@ public class AssignmentService {
         
         return plannerItemRepository.countByStudentIdAndDueAtBetween(
                 studentId, startDateTime, endDateTime);
+    }
+
+    /**
+     * Fetches submissions data for assignments from all courses.
+     * Groups assignments by course and fetches submissions for each course.
+     * 
+     * @param token Canvas API token
+     * @param studentId Canvas user ID of the student
+     * @param assignments List of assignment DTOs to fetch submissions for
+     * @return Map of assignment_id to SubmissionDto
+     */
+    private Map<Long, SubmissionDto> fetchSubmissionsForAssignments(String token, Long studentId, 
+                                                                   List<AssignmentDto> assignments) {
+        // Group assignments by course ID to minimize API calls
+        Map<Long, List<AssignmentDto>> assignmentsByCourse = assignments.stream()
+                .filter(assignment -> assignment.getCourseId() != null)
+                .collect(Collectors.groupingBy(AssignmentDto::getCourseId));
+        
+        log.debug("Fetching submissions from {} courses for student {}", 
+                 assignmentsByCourse.size(), studentId);
+        
+        Map<Long, SubmissionDto> submissionsMap = assignmentsByCourse.entrySet().stream()
+                .flatMap(entry -> {
+                    Long courseId = entry.getKey();
+                    try {
+                        List<SubmissionDto> submissions = canvasApiService.getStudentSubmissions(
+                                token, courseId, studentId);
+                        return submissions.stream();
+                    } catch (Exception e) {
+                        log.warn("Failed to fetch submissions for course {}: {}", courseId, e.getMessage());
+                        return List.<SubmissionDto>of().stream();
+                    }
+                })
+                .collect(Collectors.toMap(
+                        SubmissionDto::getAssignmentId,
+                        Function.identity(),
+                        (existing, replacement) -> replacement // Keep the latest if duplicates
+                ));
+        
+        return submissionsMap;
+    }
+
+    /**
+     * Maps accurate grade information from submissions to assignment DTOs.
+     * Uses plannable_id from assignments to match with assignment_id from submissions.
+     * 
+     * @param assignments List of assignment DTOs from planner items
+     * @param submissionsMap Map of assignment_id to SubmissionDto
+     * @return List of assignment DTOs with enhanced grade information
+     */
+    private List<AssignmentDto> mapGradesToAssignments(List<AssignmentDto> assignments, 
+                                                      Map<Long, SubmissionDto> submissionsMap) {
+        return assignments.stream()
+                .map(assignment -> {
+                    // Map plannable_id to assignment_id for grade lookup
+                    SubmissionDto submission = submissionsMap.get(assignment.getPlannableId());
+                    
+                    if (submission != null) {
+                        // Update assignment with accurate grade information
+                        assignment.setCurrentGrade(submission.getEffectiveScore());
+                        assignment.setSubmitted(submission.isSubmitted());
+                        assignment.setGraded(submission.isGraded());
+                        assignment.setLate(Boolean.TRUE.equals(submission.getLate()));
+                        assignment.setMissing(Boolean.TRUE.equals(submission.getMissing()));
+                        
+                        log.debug("Mapped grade {} for assignment {} (plannable_id: {})", 
+                                 submission.getEffectiveScore(), assignment.getAssignmentTitle(), 
+                                 assignment.getPlannableId());
+                    } else {
+                        log.debug("No submission found for assignment {} (plannable_id: {})", 
+                                 assignment.getAssignmentTitle(), assignment.getPlannableId());
+                    }
+                    
+                    return assignment;
+                })
+                .collect(Collectors.toList());
     }
 }

@@ -134,4 +134,35 @@ public class PlannerItem {
             default -> "badge-secondary";
         };
     }
+
+    /**
+     * Formats the grade display for the UI.
+     * Shows current grade out of possible points, or "Not graded" if no grade.
+     * 
+     * @return Formatted grade string for display
+     */
+    public String getFormattedGrade() {
+        if (currentGrade == null) {
+            return "Not graded";
+        }
+        
+        StringBuilder gradeText = new StringBuilder();
+        gradeText.append(currentGrade);
+        
+        if (pointsPossible != null) {
+            gradeText.append("/").append(pointsPossible);
+        }
+        
+        gradeText.append(" pts");
+        return gradeText.toString();
+    }
+
+    /**
+     * Gets the formatted points possible display.
+     * 
+     * @return Formatted points possible string or "-" if not set
+     */
+    public String getFormattedPointsPossible() {
+        return pointsPossible != null ? pointsPossible + " pts" : "-";
+    }
 }

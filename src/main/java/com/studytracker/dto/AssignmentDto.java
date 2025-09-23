@@ -45,6 +45,12 @@ public class AssignmentDto {
     private String contextName;
 
     /**
+     * Course ID this assignment belongs to
+     */
+    @JsonProperty("course_id")
+    private Long courseId;
+
+    /**
      * Assignment due date and time
      */
     @JsonProperty("plannable_date")
@@ -67,6 +73,26 @@ public class AssignmentDto {
      */
     @JsonProperty("submissions")
     private SubmissionDto submission;
+
+    /**
+     * Whether the assignment has been submitted (convenience method)
+     */
+    private Boolean submitted;
+
+    /**
+     * Whether the assignment is marked as missing (convenience method)
+     */
+    private Boolean missing;
+
+    /**
+     * Whether the assignment was submitted late (convenience method)
+     */
+    private Boolean late;
+
+    /**
+     * Whether the assignment has been graded (convenience method)
+     */
+    private Boolean graded;
 
     /**
      * Nested DTO for submission information
