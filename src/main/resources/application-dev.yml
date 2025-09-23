@@ -20,6 +20,12 @@ canvas:
     base-url: https://lgsuhsd.instructure.com/api/v1
     timeout: 30000
 
+google:
+  oauth:
+    client-id: ${GOOGLE_CLIENT_ID:your-google-client-id-dev}
+    client-secret: ${GOOGLE_CLIENT_SECRET:your-google-client-secret-dev}
+    redirect-uri: http://localhost:8080/auth/google/callback
+
 logging:
   level:
     com.studytracker: DEBUG

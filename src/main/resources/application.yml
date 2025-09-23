@@ -42,6 +42,17 @@ canvas:
       verify-hostname: false
       trust-all-certs: true
 
+google:
+  oauth:
+    client-id: ${GOOGLE_CLIENT_ID:your-google-client-id}
+    client-secret: ${GOOGLE_CLIENT_SECRET:your-google-client-secret}
+    redirect-uri: ${GOOGLE_REDIRECT_URI:http://localhost:8084/auth/google/callback}
+    scopes:
+      - https://www.googleapis.com/auth/calendar
+      - https://www.googleapis.com/auth/calendar.events
+  calendar:
+    application-name: ${GOOGLE_CALENDAR_APP_NAME:StudyTracker Calendar Integration}
+
 logging:
   level:
     com.studytracker: INFO
