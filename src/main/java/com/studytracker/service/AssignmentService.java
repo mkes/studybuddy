@@ -200,10 +200,11 @@ public class AssignmentService {
             return "late";
         }
 
-        // Check if overdue (past due date and not submitted)
+        // Check if overdue (past due date, not submitted, and not graded with score)
         if (assignment.getDueAt() != null && 
             assignment.getDueAt().isBefore(LocalDateTime.now()) && 
-            !Boolean.TRUE.equals(assignment.getSubmitted())) {
+            !Boolean.TRUE.equals(assignment.getSubmitted()) &&
+            !isGradedWithScore(assignment)) {
             return "overdue";
         }
 
@@ -367,5 +368,16 @@ public class AssignmentService {
                     return assignment;
                 })
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Checks if the assignment is graded and has a score.
+     * Used to determine if an assignment should be marked as overdue.
+     * 
+     * @param assignment PlannerItem to check
+     * @return true if assignment is graded and has a current grade/score
+     */
+    private boolean isGradedWithScore(PlannerItem assignment) {
+        return Boolean.TRUE.equals(assignment.getGraded()) && assignment.getCurrentGrade() != null;
     }
 }

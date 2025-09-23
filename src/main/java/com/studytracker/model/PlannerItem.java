@@ -113,11 +113,21 @@ public class PlannerItem {
             return "missing";
         } else if (late) {
             return "late";
-        } else if (dueAt != null && dueAt.isBefore(LocalDateTime.now()) && !submitted) {
+        } else if (dueAt != null && dueAt.isBefore(LocalDateTime.now()) && !submitted && !isGradedWithScore()) {
             return "overdue";
         } else {
             return "pending";
         }
+    }
+
+    /**
+     * Checks if the assignment is graded and has a score.
+     * Used to determine if an assignment should be marked as overdue.
+     * 
+     * @return true if assignment is graded and has a current grade/score
+     */
+    private boolean isGradedWithScore() {
+        return Boolean.TRUE.equals(graded) && currentGrade != null;
     }
 
     /**

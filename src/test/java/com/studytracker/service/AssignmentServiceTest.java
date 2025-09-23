@@ -272,6 +272,46 @@ class AssignmentServiceTest {
     }
 
     @Test
+    @DisplayName("Should calculate status as 'pending' for past due assignment that is graded with score")
+    void calculateAssignmentStatus_PastDueGradedWithScore_ShouldReturnPending() {
+        // Given
+        PlannerItem assignment = PlannerItem.builder()
+                .submitted(false)
+                .graded(true)
+                .missing(false)
+                .late(false)
+                .dueAt(LocalDateTime.now().minusDays(1))
+                .currentGrade(new BigDecimal("85.0"))
+                .build();
+
+        // When
+        String status = assignmentService.calculateAssignmentStatus(assignment);
+
+        // Then
+        assertThat(status).isEqualTo("pending");
+    }
+
+    @Test
+    @DisplayName("Should calculate status as 'overdue' for past due assignment that is graded but has no score")
+    void calculateAssignmentStatus_PastDueGradedNoScore_ShouldReturnOverdue() {
+        // Given
+        PlannerItem assignment = PlannerItem.builder()
+                .submitted(false)
+                .graded(true)
+                .missing(false)
+                .late(false)
+                .dueAt(LocalDateTime.now().minusDays(1))
+                .currentGrade(null)
+                .build();
+
+        // When
+        String status = assignmentService.calculateAssignmentStatus(assignment);
+
+        // Then
+        assertThat(status).isEqualTo("overdue");
+    }
+
+    @Test
     @DisplayName("Should calculate status as 'pending' for future assignment")
     void calculateAssignmentStatus_FutureAssignment_ShouldReturnPending() {
         // Given

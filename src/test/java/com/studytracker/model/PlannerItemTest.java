@@ -169,9 +169,39 @@ class PlannerItemTest {
     void testStatusOverdue() {
         validPlannerItem.setDueAt(LocalDateTime.now().minusDays(1)); // Past due date
         validPlannerItem.setSubmitted(false);
+        validPlannerItem.setGraded(false);
+        validPlannerItem.setCurrentGrade(null);
         
         assertEquals("overdue", validPlannerItem.getStatus(), 
                 "Status should be 'overdue' when past due date and not submitted");
+    }
+
+    @Test
+    @DisplayName("Status calculation - not overdue when graded with score")
+    void testStatusNotOverdueWhenGradedWithScore() {
+        validPlannerItem.setDueAt(LocalDateTime.now().minusDays(1)); // Past due date
+        validPlannerItem.setSubmitted(false); // Not submitted
+        validPlannerItem.setGraded(true); // But graded
+        validPlannerItem.setCurrentGrade(new BigDecimal("85.0")); // With a score
+        validPlannerItem.setMissing(false);
+        validPlannerItem.setLate(false);
+        
+        assertEquals("pending", validPlannerItem.getStatus(), 
+                "Status should be 'pending' (not overdue) when graded with score, even if past due date");
+    }
+
+    @Test
+    @DisplayName("Status calculation - overdue when graded but no score")
+    void testStatusOverdueWhenGradedButNoScore() {
+        validPlannerItem.setDueAt(LocalDateTime.now().minusDays(1)); // Past due date
+        validPlannerItem.setSubmitted(false); // Not submitted
+        validPlannerItem.setGraded(true); // Graded
+        validPlannerItem.setCurrentGrade(null); // But no score
+        validPlannerItem.setMissing(false);
+        validPlannerItem.setLate(false);
+        
+        assertEquals("overdue", validPlannerItem.getStatus(), 
+                "Status should be 'overdue' when graded but no score available");
     }
 
     @Test
