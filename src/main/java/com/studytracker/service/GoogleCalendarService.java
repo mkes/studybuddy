@@ -157,11 +157,19 @@ public class GoogleCalendarService {
      */
     public String createAssignmentEvent(String userId, Long studentId, AccountType accountType,
                                       PlannerItem assignment) {
+        return createAssignmentEvent(userId, studentId, accountType, assignment, null);
+    }
+    
+    /**
+     * Create assignment event in calendar with custom reminder settings
+     */
+    public String createAssignmentEvent(String userId, Long studentId, AccountType accountType,
+                                      PlannerItem assignment, List<Integer> customReminderMinutes) {
         return executeWithRetry(() -> {
             Calendar calendarService = createCalendarService(userId, studentId, accountType);
             String calendarId = getOrCreateCalendarId(userId, studentId, accountType, "Student");
             
-            Event event = buildAssignmentEvent(assignment, accountType);
+            Event event = buildAssignmentEvent(assignment, accountType, customReminderMinutes);
             
             Event createdEvent = calendarService.events()
                     .insert(calendarId, event)
@@ -180,6 +188,14 @@ public class GoogleCalendarService {
      */
     public boolean updateAssignmentEvent(String userId, Long studentId, AccountType accountType,
                                        String eventId, PlannerItem assignment) {
+        return updateAssignmentEvent(userId, studentId, accountType, eventId, assignment, null);
+    }
+    
+    /**
+     * Update assignment event in calendar with custom reminder settings
+     */
+    public boolean updateAssignmentEvent(String userId, Long studentId, AccountType accountType,
+                                       String eventId, PlannerItem assignment, List<Integer> customReminderMinutes) {
         return executeWithRetry(() -> {
             Calendar calendarService = createCalendarService(userId, studentId, accountType);
             String calendarId = getCalendarId(userId, studentId, accountType);
@@ -190,7 +206,7 @@ public class GoogleCalendarService {
                 return false;
             }
             
-            Event event = buildAssignmentEvent(assignment, accountType);
+            Event event = buildAssignmentEvent(assignment, accountType, customReminderMinutes);
             
             calendarService.events()
                     .update(calendarId, eventId, event)
@@ -228,6 +244,94 @@ public class GoogleCalendarService {
             
             return true;
         }, "delete assignment event");
+    }
+    
+    /**
+     * Handle completed assignment event (mark as completed or delete based on settings)
+     */
+    public boolean handleCompletedAssignmentEvent(String userId, Long studentId, AccountType accountType,
+                                                String eventId, PlannerItem assignment, boolean deleteCompleted) {
+        if (deleteCompleted) {
+            return deleteAssignmentEvent(userId, studentId, accountType, eventId);
+        } else {
+            return markEventAsCompleted(userId, studentId, accountType, eventId, assignment);
+        }
+    }
+    
+    /**
+     * Mark assignment event as completed by updating its properties
+     */
+    public boolean markEventAsCompleted(String userId, Long studentId, AccountType accountType,
+                                      String eventId, PlannerItem assignment) {
+        return executeWithRetry(() -> {
+            Calendar calendarService = createCalendarService(userId, studentId, accountType);
+            String calendarId = getCalendarId(userId, studentId, accountType);
+            
+            if (calendarId == null) {
+                log.warn("No calendar ID found for user {} student {} account type {}", 
+                        userId, studentId, accountType);
+                return false;
+            }
+            
+            // Get existing event
+            Event existingEvent = calendarService.events()
+                    .get(calendarId, eventId)
+                    .execute();
+            
+            if (existingEvent == null) {
+                log.warn("Event {} not found in calendar {}", eventId, calendarId);
+                return false;
+            }
+            
+            // Update event to mark as completed
+            Event updatedEvent = buildCompletedAssignmentEvent(existingEvent, assignment, accountType);
+            
+            calendarService.events()
+                    .update(calendarId, eventId, updatedEvent)
+                    .execute();
+            
+            log.info("Marked event {} as completed for assignment {} in calendar {} for user {} student {} account type {}", 
+                    eventId, assignment.getPlannableId(), calendarId, 
+                    userId, studentId, accountType);
+            
+            return true;
+        }, "mark assignment event as completed");
+    }
+    
+    /**
+     * Build completed assignment event with updated formatting
+     */
+    private Event buildCompletedAssignmentEvent(Event existingEvent, PlannerItem assignment, AccountType accountType) {
+        // Update title to show completion
+        String completedTitle = "✅ " + existingEvent.getSummary();
+        if (!completedTitle.startsWith("✅")) {
+            existingEvent.setSummary(completedTitle);
+        }
+        
+        // Update description to show completion status
+        String updatedDescription = formatEventDescription(assignment);
+        existingEvent.setDescription(updatedDescription);
+        
+        // Change color to green for completed
+        existingEvent.setColorId("10"); // Green
+        
+        // Update extended properties
+        if (existingEvent.getExtendedProperties() != null && 
+            existingEvent.getExtendedProperties().getPrivate() != null) {
+            Map<String, String> privateProperties = existingEvent.getExtendedProperties().getPrivate();
+            privateProperties.put("completed", "true");
+            privateProperties.put("completedAt", LocalDateTime.now().toString());
+            privateProperties.put("submitted", assignment.getSubmitted().toString());
+            privateProperties.put("graded", assignment.getGraded().toString());
+        }
+        
+        // Remove reminders for completed assignments
+        Event.Reminders reminders = new Event.Reminders();
+        reminders.setUseDefault(false);
+        reminders.setOverrides(Collections.emptyList());
+        existingEvent.setReminders(reminders);
+        
+        return existingEvent;
     }
     
     /**
@@ -334,34 +438,143 @@ public class GoogleCalendarService {
     }
     
     /**
-     * Build Event object from PlannerItem
+     * Build Event object from PlannerItem with enhanced formatting and metadata
      */
     private Event buildAssignmentEvent(PlannerItem assignment, AccountType accountType) {
+        return buildAssignmentEvent(assignment, accountType, null);
+    }
+    
+    /**
+     * Build Event object from PlannerItem with custom reminder settings
+     */
+    private Event buildAssignmentEvent(PlannerItem assignment, AccountType accountType, 
+                                     List<Integer> customReminderMinutes) {
         Event event = new Event();
         
-        // Set event title
-        event.setSummary(assignment.getAssignmentTitle());
+        // Set event title with consistent formatting
+        String eventTitle = formatEventTitle(assignment);
+        event.setSummary(eventTitle);
         
-        // Set event description
-        StringBuilder description = new StringBuilder();
-        description.append("Course: ").append(assignment.getContextName()).append("\n");
-        if (assignment.getPointsPossible() != null) {
-            description.append("Points: ").append(assignment.getPointsPossible()).append("\n");
+        // Set enhanced event description
+        String eventDescription = formatEventDescription(assignment);
+        event.setDescription(eventDescription);
+        
+        // Set event time with improved logic
+        setEventDateTime(event, assignment);
+        
+        // Set reminders based on account type and custom settings
+        setEventReminders(event, accountType, customReminderMinutes);
+        
+        // Set consistent color coding
+        event.setColorId(getEventColorId(assignment));
+        
+        // Set comprehensive extended properties for assignment metadata
+        setExtendedProperties(event, assignment);
+        
+        return event;
+    }
+    
+    /**
+     * Format event title with consistent naming convention
+     */
+    private String formatEventTitle(PlannerItem assignment) {
+        StringBuilder title = new StringBuilder();
+        
+        // Add assignment type prefix if available
+        String assignmentType = determineAssignmentType(assignment);
+        if (assignmentType != null && !assignmentType.isEmpty()) {
+            title.append("[").append(assignmentType).append("] ");
         }
-        description.append("Assignment ID: ").append(assignment.getPlannableId());
-        event.setDescription(description.toString());
         
-        // Set event time (1 hour duration ending at due time)
+        // Add main title
+        title.append(assignment.getAssignmentTitle());
+        
+        // Add course abbreviation if different from title
+        if (assignment.getContextName() != null && 
+            !assignment.getAssignmentTitle().contains(assignment.getContextName())) {
+            title.append(" - ").append(assignment.getContextName());
+        }
+        
+        return title.toString();
+    }
+    
+    /**
+     * Format event description with comprehensive assignment details
+     */
+    private String formatEventDescription(PlannerItem assignment) {
+        StringBuilder description = new StringBuilder();
+        
+        // Course information
+        if (assignment.getContextName() != null) {
+            description.append("📚 Course: ").append(assignment.getContextName()).append("\n");
+        }
+        
+        // Points information
+        if (assignment.getPointsPossible() != null) {
+            description.append("🎯 Points: ").append(assignment.getPointsPossible()).append("\n");
+        }
+        
+        // Assignment status
+        if (assignment.getSubmitted()) {
+            description.append("✅ Status: Submitted\n");
+        } else if (assignment.getMissing()) {
+            description.append("❌ Status: Missing\n");
+        } else if (assignment.getLate()) {
+            description.append("⏰ Status: Late\n");
+        } else {
+            description.append("📝 Status: Pending\n");
+        }
+        
+        // Due date information
         if (assignment.getDueAt() != null) {
+            description.append("📅 Due: ")
+                    .append(assignment.getDueAt().format(DateTimeFormatter.ofPattern("MMM dd, yyyy 'at' h:mm a")))
+                    .append("\n");
+        }
+        
+        // Assignment type
+        String assignmentType = determineAssignmentType(assignment);
+        if (assignmentType != null && !assignmentType.isEmpty()) {
+            description.append("📋 Type: ").append(assignmentType).append("\n");
+        }
+        
+        // Metadata for tracking
+        description.append("\n🔗 Assignment ID: ").append(assignment.getPlannableId());
+        
+        return description.toString();
+    }
+    
+    /**
+     * Set event date and time with improved logic
+     */
+    private void setEventDateTime(Event event, PlannerItem assignment) {
+        if (assignment.getDueAt() == null) {
+            return;
+        }
+        
+        LocalDateTime dueDateTime = assignment.getDueAt();
+        
+        // For assignments due at midnight or very early morning, create all-day event
+        if (dueDateTime.getHour() == 0 || (dueDateTime.getHour() <= 2 && dueDateTime.getMinute() == 0)) {
+            // All-day event on due date
+            DateTime date = new DateTime(true, 
+                    dueDateTime.toLocalDate().atStartOfDay()
+                            .atZone(ZoneId.systemDefault())
+                            .toInstant()
+                            .toEpochMilli(), 
+                    null);
+            event.setStart(new EventDateTime().setDate(date));
+            event.setEnd(new EventDateTime().setDate(date));
+        } else {
+            // Timed event: 1 hour duration ending at due time
             DateTime startTime = new DateTime(
-                    assignment.getDueAt().minusHours(1)
+                    dueDateTime.minusHours(1)
                             .atZone(ZoneId.systemDefault())
                             .toInstant()
                             .toEpochMilli()
             );
             DateTime endTime = new DateTime(
-                    assignment.getDueAt()
-                            .atZone(ZoneId.systemDefault())
+                    dueDateTime.atZone(ZoneId.systemDefault())
                             .toInstant()
                             .toEpochMilli()
             );
@@ -369,40 +582,164 @@ public class GoogleCalendarService {
             event.setStart(new EventDateTime().setDateTime(startTime));
             event.setEnd(new EventDateTime().setDateTime(endTime));
         }
-        
-        // Set reminders based on account type
+    }
+    
+    /**
+     * Set event reminders based on account type and custom settings
+     */
+    private void setEventReminders(Event event, AccountType accountType, List<Integer> customReminderMinutes) {
         Event.Reminders reminders = new Event.Reminders();
         reminders.setUseDefault(false);
         
         List<EventReminder> reminderList = new ArrayList<>();
-        if (accountType == AccountType.PARENT) {
-            // Parent reminders: 24h, 2h
-            reminderList.add(new EventReminder().setMethod("email").setMinutes(1440)); // 24h
-            reminderList.add(new EventReminder().setMethod("popup").setMinutes(120));  // 2h
+        
+        if (customReminderMinutes != null && !customReminderMinutes.isEmpty()) {
+            // Use custom reminder settings
+            for (Integer minutes : customReminderMinutes) {
+                String method = (accountType == AccountType.PARENT && minutes >= 1440) ? "email" : "popup";
+                reminderList.add(new EventReminder().setMethod(method).setMinutes(minutes));
+            }
         } else {
-            // Student reminders: 2h, 30min
-            reminderList.add(new EventReminder().setMethod("popup").setMinutes(120));  // 2h
-            reminderList.add(new EventReminder().setMethod("popup").setMinutes(30));   // 30min
+            // Use default reminders based on account type
+            if (accountType == AccountType.PARENT) {
+                // Parent reminders: 24h (email), 2h (popup)
+                reminderList.add(new EventReminder().setMethod("email").setMinutes(1440)); // 24h
+                reminderList.add(new EventReminder().setMethod("popup").setMinutes(120));  // 2h
+            } else {
+                // Student reminders: 2h, 30min (both popup)
+                reminderList.add(new EventReminder().setMethod("popup").setMinutes(120));  // 2h
+                reminderList.add(new EventReminder().setMethod("popup").setMinutes(30));   // 30min
+            }
         }
         
         reminders.setOverrides(reminderList);
         event.setReminders(reminders);
-        
-        // Set color
-        event.setColorId(EVENT_COLOR_ID);
-        
-        // Set extended properties for assignment metadata
+    }
+    
+    /**
+     * Get event color ID based on assignment properties
+     */
+    private String getEventColorId(PlannerItem assignment) {
+        // Color coding based on assignment status and type
+        if (assignment.getSubmitted()) {
+            return "10"; // Green for submitted
+        } else if (assignment.getMissing()) {
+            return "11"; // Red for missing
+        } else if (assignment.getLate()) {
+            return "6";  // Orange for late
+        } else {
+            // Color based on assignment type
+            String assignmentType = determineAssignmentType(assignment);
+            switch (assignmentType.toLowerCase()) {
+                case "quiz":
+                case "test":
+                case "exam":
+                    return "9"; // Blue for quizzes/tests
+                case "discussion":
+                    return "5"; // Yellow for discussions
+                case "project":
+                    return "7"; // Cyan for projects
+                default:
+                    return EVENT_COLOR_ID; // Default blue for regular assignments
+            }
+        }
+    }
+    
+    /**
+     * Set comprehensive extended properties for assignment metadata
+     */
+    private void setExtendedProperties(Event event, PlannerItem assignment) {
         Event.ExtendedProperties extendedProperties = new Event.ExtendedProperties();
         Map<String, String> privateProperties = new HashMap<>();
+        
+        // Core assignment metadata
         privateProperties.put("assignmentId", assignment.getPlannableId().toString());
         privateProperties.put("studentId", assignment.getStudentId().toString());
+        privateProperties.put("contextName", assignment.getContextName() != null ? assignment.getContextName() : "");
+        
+        // Assignment details
         if (assignment.getPointsPossible() != null) {
             privateProperties.put("pointsPossible", assignment.getPointsPossible().toString());
         }
+        
+        // Assignment status
+        privateProperties.put("submitted", assignment.getSubmitted().toString());
+        privateProperties.put("missing", assignment.getMissing().toString());
+        privateProperties.put("late", assignment.getLate().toString());
+        privateProperties.put("graded", assignment.getGraded().toString());
+        
+        // Assignment type
+        String assignmentType = determineAssignmentType(assignment);
+        if (assignmentType != null && !assignmentType.isEmpty()) {
+            privateProperties.put("assignmentType", assignmentType);
+        }
+        
+        // Sync metadata
+        privateProperties.put("syncedAt", LocalDateTime.now().toString());
+        privateProperties.put("syncVersion", "1.0");
+        
         extendedProperties.setPrivate(privateProperties);
         event.setExtendedProperties(extendedProperties);
+    }
+    
+    /**
+     * Determine assignment type from title or context
+     */
+    private String determineAssignmentType(PlannerItem assignment) {
+        if (assignment.getAssignmentTitle() == null) {
+            return "Assignment";
+        }
         
-        return event;
+        String title = assignment.getAssignmentTitle().toLowerCase();
+        
+        if (title.contains("quiz")) {
+            return "Quiz";
+        } else if (title.contains("test") || title.contains("exam")) {
+            return "Test";
+        } else if (title.contains("discussion") || title.contains("forum")) {
+            return "Discussion";
+        } else if (title.contains("project") || title.contains("presentation")) {
+            return "Project";
+        } else if (title.contains("homework") || title.contains("hw")) {
+            return "Homework";
+        } else if (title.contains("lab")) {
+            return "Lab";
+        } else {
+            return "Assignment";
+        }
+    }
+    
+    /**
+     * Parse reminder minutes from JSON string format used in CalendarSyncSettings
+     */
+    public static List<Integer> parseReminderMinutes(String reminderJson) {
+        if (reminderJson == null || reminderJson.trim().isEmpty()) {
+            return Collections.emptyList();
+        }
+        
+        try {
+            // Remove brackets and split by comma
+            String cleaned = reminderJson.trim().replaceAll("[\\[\\]]", "");
+            if (cleaned.isEmpty()) {
+                return Collections.emptyList();
+            }
+            
+            String[] parts = cleaned.split(",");
+            List<Integer> minutes = new ArrayList<>();
+            
+            for (String part : parts) {
+                try {
+                    minutes.add(Integer.parseInt(part.trim()));
+                } catch (NumberFormatException e) {
+                    log.warn("Invalid reminder minute value: {}", part.trim());
+                }
+            }
+            
+            return minutes;
+        } catch (Exception e) {
+            log.warn("Failed to parse reminder minutes from JSON: {}", reminderJson, e);
+            return Collections.emptyList();
+        }
     }
     
     /**

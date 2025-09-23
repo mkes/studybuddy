@@ -377,29 +377,65 @@ public class CalendarSyncService {
     private SyncResult syncSingleAssignmentToCalendar(String userId, Long studentId, AccountType accountType,
                                                     PlannerItem assignment, CalendarSyncSettings settings) {
         try {
+            // Get custom reminder settings for this account type
+            List<Integer> customReminders = getReminderSettings(settings, accountType);
+            
             // Check if event mapping already exists
             Optional<CalendarEventMapping> existingMapping = eventMappingRepository
                     .findByAssignmentIdAndStudentIdAndAccountType(assignment.getPlannableId(), 
                             studentId, accountType);
             
             if (existingMapping.isPresent()) {
-                // Update existing event
+                // Handle existing event based on assignment status
                 CalendarEventMapping mapping = existingMapping.get();
-                boolean updated = googleCalendarService.updateAssignmentEvent(userId, studentId, 
-                        accountType, mapping.getGoogleEventId(), assignment);
                 
-                if (updated) {
-                    mapping.setLastSyncedAt(LocalDateTime.now());
-                    eventMappingRepository.save(mapping);
-                    return SyncResult.updated();
+                if (assignment.getSubmitted() && !settings.getSyncCompletedAssignments()) {
+                    // Assignment completed and user doesn't want completed assignments synced
+                    boolean deleted = googleCalendarService.deleteAssignmentEvent(userId, studentId, 
+                            accountType, mapping.getGoogleEventId());
+                    
+                    if (deleted) {
+                        eventMappingRepository.delete(mapping);
+                        return SyncResult.deleted();
+                    } else {
+                        return SyncResult.error("Failed to delete completed assignment event");
+                    }
+                } else if (assignment.getSubmitted()) {
+                    // Mark as completed but keep the event
+                    boolean updated = googleCalendarService.markEventAsCompleted(userId, studentId, 
+                            accountType, mapping.getGoogleEventId(), assignment);
+                    
+                    if (updated) {
+                        mapping.setLastSyncedAt(LocalDateTime.now());
+                        eventMappingRepository.save(mapping);
+                        return SyncResult.updated();
+                    } else {
+                        return SyncResult.error("Failed to mark event as completed");
+                    }
                 } else {
-                    return SyncResult.error("Failed to update event");
+                    // Update existing event with current assignment data
+                    boolean updated = googleCalendarService.updateAssignmentEvent(userId, studentId, 
+                            accountType, mapping.getGoogleEventId(), assignment, customReminders);
+                    
+                    if (updated) {
+                        mapping.setLastSyncedAt(LocalDateTime.now());
+                        eventMappingRepository.save(mapping);
+                        return SyncResult.updated();
+                    } else {
+                        return SyncResult.error("Failed to update event");
+                    }
                 }
                 
             } else {
-                // Create new event
+                // Create new event only if assignment is not completed or user wants completed assignments
+                if (assignment.getSubmitted() && !settings.getSyncCompletedAssignments()) {
+                    log.debug("Skipping completed assignment {} as sync completed assignments is disabled", 
+                            assignment.getPlannableId());
+                    return SyncResult.filtered();
+                }
+                
                 String eventId = googleCalendarService.createAssignmentEvent(userId, studentId, 
-                        accountType, assignment);
+                        accountType, assignment, customReminders);
                 
                 if (eventId != null) {
                     // Create mapping
@@ -421,6 +457,139 @@ public class CalendarSyncService {
         } catch (Exception e) {
             log.error("Failed to sync assignment {} to {} calendar", assignment.getPlannableId(), accountType, e);
             return SyncResult.error("Sync failed: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Get reminder settings for specific account type from sync settings
+     */
+    private List<Integer> getReminderSettings(CalendarSyncSettings settings, AccountType accountType) {
+        String reminderJson = (accountType == AccountType.PARENT) ? 
+                settings.getParentReminderMinutes() : settings.getStudentReminderMinutes();
+        
+        return GoogleCalendarService.parseReminderMinutes(reminderJson);
+    }
+    
+    /**
+     * Handle assignment status changes (completion, deletion, etc.)
+     */
+    @Transactional
+    public SyncResult handleAssignmentStatusChange(String userId, Long studentId, PlannerItem assignment, 
+                                                 String statusChange) {
+        log.info("Handling assignment status change for user {} student {} assignment {} status {}", 
+                userId, studentId, assignment.getPlannableId(), statusChange);
+        
+        try {
+            CalendarSyncSettings settings = getOrCreateSyncSettings(userId, studentId);
+            
+            if (!settings.getSyncEnabled()) {
+                return SyncResult.disabled();
+            }
+            
+            CalendarTokenService.CalendarConnectionStatus connectionStatus = 
+                    tokenService.getConnectionStatus(userId, studentId);
+            
+            if (!connectionStatus.isAnyConnected()) {
+                return SyncResult.noCalendarsConnected();
+            }
+            
+            SyncResult result = new SyncResult();
+            
+            // Handle status change for each connected calendar
+            if (settings.getSyncToParentCalendar() && connectionStatus.isParentConnected()) {
+                SyncResult parentResult = handleStatusChangeForCalendar(userId, studentId, 
+                        AccountType.PARENT, assignment, statusChange, settings);
+                result.merge(parentResult);
+            }
+            
+            if (settings.getSyncToStudentCalendar() && connectionStatus.isStudentConnected()) {
+                SyncResult studentResult = handleStatusChangeForCalendar(userId, studentId, 
+                        AccountType.STUDENT, assignment, statusChange, settings);
+                result.merge(studentResult);
+            }
+            
+            return result;
+            
+        } catch (Exception e) {
+            log.error("Failed to handle assignment status change for user {} student {} assignment {}", 
+                    userId, studentId, assignment.getPlannableId(), e);
+            return SyncResult.error("Status change handling failed: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Handle assignment status change for a specific calendar
+     */
+    private SyncResult handleStatusChangeForCalendar(String userId, Long studentId, AccountType accountType,
+                                                   PlannerItem assignment, String statusChange, 
+                                                   CalendarSyncSettings settings) {
+        try {
+            Optional<CalendarEventMapping> mappingOpt = eventMappingRepository
+                    .findByAssignmentIdAndStudentIdAndAccountType(assignment.getPlannableId(), 
+                            studentId, accountType);
+            
+            if (mappingOpt.isEmpty()) {
+                log.debug("No event mapping found for assignment {} student {} account type {}", 
+                        assignment.getPlannableId(), studentId, accountType);
+                return SyncResult.success();
+            }
+            
+            CalendarEventMapping mapping = mappingOpt.get();
+            
+            switch (statusChange.toLowerCase()) {
+                case "completed":
+                case "submitted":
+                    if (settings.getSyncCompletedAssignments()) {
+                        boolean marked = googleCalendarService.markEventAsCompleted(userId, studentId, 
+                                accountType, mapping.getGoogleEventId(), assignment);
+                        if (marked) {
+                            mapping.setLastSyncedAt(LocalDateTime.now());
+                            eventMappingRepository.save(mapping);
+                            return SyncResult.updated();
+                        }
+                    } else {
+                        boolean deleted = googleCalendarService.deleteAssignmentEvent(userId, studentId, 
+                                accountType, mapping.getGoogleEventId());
+                        if (deleted) {
+                            eventMappingRepository.delete(mapping);
+                            return SyncResult.deleted();
+                        }
+                    }
+                    break;
+                    
+                case "deleted":
+                case "removed":
+                    boolean deleted = googleCalendarService.deleteAssignmentEvent(userId, studentId, 
+                            accountType, mapping.getGoogleEventId());
+                    if (deleted) {
+                        eventMappingRepository.delete(mapping);
+                        return SyncResult.deleted();
+                    }
+                    break;
+                    
+                case "updated":
+                case "modified":
+                    List<Integer> customReminders = getReminderSettings(settings, accountType);
+                    boolean updated = googleCalendarService.updateAssignmentEvent(userId, studentId, 
+                            accountType, mapping.getGoogleEventId(), assignment, customReminders);
+                    if (updated) {
+                        mapping.setLastSyncedAt(LocalDateTime.now());
+                        eventMappingRepository.save(mapping);
+                        return SyncResult.updated();
+                    }
+                    break;
+                    
+                default:
+                    log.warn("Unknown status change: {}", statusChange);
+                    return SyncResult.success();
+            }
+            
+            return SyncResult.error("Failed to handle status change: " + statusChange);
+            
+        } catch (Exception e) {
+            log.error("Failed to handle status change {} for assignment {} account type {}", 
+                    statusChange, assignment.getPlannableId(), accountType, e);
+            return SyncResult.error("Status change failed: " + e.getMessage());
         }
     }
     

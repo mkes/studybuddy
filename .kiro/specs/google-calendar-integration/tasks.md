@@ -73,7 +73,7 @@
   - Add responsive design for mobile and desktop compatibility
   - _Requirements: 1.1, 1.6, 3.1, 3.2, 3.3_
 
-- [ ] 9. Implement calendar event creation and management
+- [x] 9. Implement calendar event creation and management
   - Create assignment-to-calendar-event mapping logic
   - Implement account-specific event creation with different reminder settings
   - Add event update handling for assignment changes

@@ -96,9 +96,9 @@ class CalendarSyncServiceTest {
         when(eventMappingRepository.findByAssignmentIdAndStudentIdAndAccountType(
                 ASSIGNMENT_ID, STUDENT_ID, AccountType.STUDENT))
                 .thenReturn(Optional.empty());
-        when(googleCalendarService.createAssignmentEvent(USER_ID, STUDENT_ID, AccountType.PARENT, testAssignment))
+        when(googleCalendarService.createAssignmentEvent(eq(USER_ID), eq(STUDENT_ID), eq(AccountType.PARENT), eq(testAssignment), any()))
                 .thenReturn("parent-event-id");
-        when(googleCalendarService.createAssignmentEvent(USER_ID, STUDENT_ID, AccountType.STUDENT, testAssignment))
+        when(googleCalendarService.createAssignmentEvent(eq(USER_ID), eq(STUDENT_ID), eq(AccountType.STUDENT), eq(testAssignment), any()))
                 .thenReturn("student-event-id");
         when(tokenService.getCalendarId(USER_ID, STUDENT_ID, AccountType.PARENT))
                 .thenReturn(Optional.of("parent-calendar-id"));
@@ -168,7 +168,7 @@ class CalendarSyncServiceTest {
         when(eventMappingRepository.findByAssignmentIdAndStudentIdAndAccountType(
                 ASSIGNMENT_ID, STUDENT_ID, AccountType.PARENT))
                 .thenReturn(Optional.empty());
-        when(googleCalendarService.createAssignmentEvent(USER_ID, STUDENT_ID, AccountType.PARENT, testAssignment))
+        when(googleCalendarService.createAssignmentEvent(eq(USER_ID), eq(STUDENT_ID), eq(AccountType.PARENT), eq(testAssignment), any()))
                 .thenReturn("parent-event-id");
         when(tokenService.getCalendarId(USER_ID, STUDENT_ID, AccountType.PARENT))
                 .thenReturn(Optional.of("parent-calendar-id"));
@@ -181,9 +181,9 @@ class CalendarSyncServiceTest {
         assertThat(result.getCreatedCount()).isEqualTo(1); // Only parent calendar
         
         verify(googleCalendarService, times(1)).createAssignmentEvent(
-                USER_ID, STUDENT_ID, AccountType.PARENT, testAssignment);
+                eq(USER_ID), eq(STUDENT_ID), eq(AccountType.PARENT), eq(testAssignment), any());
         verify(googleCalendarService, never()).createAssignmentEvent(
-                USER_ID, STUDENT_ID, AccountType.STUDENT, testAssignment);
+                eq(USER_ID), eq(STUDENT_ID), eq(AccountType.STUDENT), eq(testAssignment), any());
     }
     
     @Test
@@ -206,9 +206,9 @@ class CalendarSyncServiceTest {
                 ASSIGNMENT_ID, STUDENT_ID, AccountType.STUDENT))
                 .thenReturn(Optional.empty());
         when(googleCalendarService.updateAssignmentEvent(
-                USER_ID, STUDENT_ID, AccountType.PARENT, "existing-event-id", testAssignment))
+                eq(USER_ID), eq(STUDENT_ID), eq(AccountType.PARENT), eq("existing-event-id"), eq(testAssignment), any()))
                 .thenReturn(true);
-        when(googleCalendarService.createAssignmentEvent(USER_ID, STUDENT_ID, AccountType.STUDENT, testAssignment))
+        when(googleCalendarService.createAssignmentEvent(eq(USER_ID), eq(STUDENT_ID), eq(AccountType.STUDENT), eq(testAssignment), any()))
                 .thenReturn("student-event-id");
         when(tokenService.getCalendarId(USER_ID, STUDENT_ID, AccountType.STUDENT))
                 .thenReturn(Optional.of("student-calendar-id"));
@@ -222,7 +222,7 @@ class CalendarSyncServiceTest {
         assertThat(result.getCreatedCount()).isEqualTo(1); // Student event created
         
         verify(googleCalendarService).updateAssignmentEvent(
-                USER_ID, STUDENT_ID, AccountType.PARENT, "existing-event-id", testAssignment);
+                eq(USER_ID), eq(STUDENT_ID), eq(AccountType.PARENT), eq("existing-event-id"), eq(testAssignment), any());
         verify(eventMappingRepository).save(existingMapping); // Updated mapping
     }
     
@@ -240,7 +240,7 @@ class CalendarSyncServiceTest {
         
         // Assert
         assertThat(result.getStatus()).isEqualTo("filtered");
-        verify(googleCalendarService, never()).createAssignmentEvent(any(), any(), any(), any());
+        verify(googleCalendarService, never()).createAssignmentEvent(any(), any(), any(), any(), any());
     }
     
     @Test
@@ -256,7 +256,7 @@ class CalendarSyncServiceTest {
         
         // Assert
         assertThat(result.getStatus()).isEqualTo("filtered");
-        verify(googleCalendarService, never()).createAssignmentEvent(any(), any(), any(), any());
+        verify(googleCalendarService, never()).createAssignmentEvent(any(), any(), any(), any(), any());
     }
     
     @Test
@@ -292,9 +292,9 @@ class CalendarSyncServiceTest {
         when(eventMappingRepository.findByAssignmentIdAndStudentIdAndAccountType(
                 ASSIGNMENT_ID, STUDENT_ID, AccountType.STUDENT))
                 .thenReturn(Optional.empty());
-        when(googleCalendarService.createAssignmentEvent(USER_ID, STUDENT_ID, AccountType.PARENT, testAssignment))
+        when(googleCalendarService.createAssignmentEvent(eq(USER_ID), eq(STUDENT_ID), eq(AccountType.PARENT), eq(testAssignment), any()))
                 .thenReturn("parent-event-id");
-        when(googleCalendarService.createAssignmentEvent(USER_ID, STUDENT_ID, AccountType.STUDENT, testAssignment))
+        when(googleCalendarService.createAssignmentEvent(eq(USER_ID), eq(STUDENT_ID), eq(AccountType.STUDENT), eq(testAssignment), any()))
                 .thenReturn("student-event-id");
         when(tokenService.getCalendarId(USER_ID, STUDENT_ID, AccountType.PARENT))
                 .thenReturn(Optional.of("parent-calendar-id"));
@@ -339,7 +339,7 @@ class CalendarSyncServiceTest {
         when(eventMappingRepository.findByAssignmentIdAndStudentIdAndAccountType(
                 anyLong(), eq(STUDENT_ID), any(AccountType.class)))
                 .thenReturn(Optional.empty());
-        when(googleCalendarService.createAssignmentEvent(eq(USER_ID), eq(STUDENT_ID), any(AccountType.class), any(PlannerItem.class)))
+        when(googleCalendarService.createAssignmentEvent(eq(USER_ID), eq(STUDENT_ID), any(AccountType.class), any(PlannerItem.class), any()))
                 .thenReturn("event-id");
         when(tokenService.getCalendarId(eq(USER_ID), eq(STUDENT_ID), any(AccountType.class)))
                 .thenReturn(Optional.of("calendar-id"));
@@ -355,9 +355,9 @@ class CalendarSyncServiceTest {
         
         // Verify that Google Calendar service was called for each assignment and calendar
         verify(googleCalendarService, times(75)).createAssignmentEvent(
-                eq(USER_ID), eq(STUDENT_ID), eq(AccountType.PARENT), any(PlannerItem.class));
+                eq(USER_ID), eq(STUDENT_ID), eq(AccountType.PARENT), any(PlannerItem.class), any());
         verify(googleCalendarService, times(75)).createAssignmentEvent(
-                eq(USER_ID), eq(STUDENT_ID), eq(AccountType.STUDENT), any(PlannerItem.class));
+                eq(USER_ID), eq(STUDENT_ID), eq(AccountType.STUDENT), any(PlannerItem.class), any());
     }
     
     @Test
@@ -384,7 +384,7 @@ class CalendarSyncServiceTest {
         when(eventMappingRepository.findByAssignmentIdAndStudentIdAndAccountType(
                 anyLong(), eq(STUDENT_ID), any(AccountType.class)))
                 .thenReturn(Optional.empty());
-        when(googleCalendarService.createAssignmentEvent(eq(USER_ID), eq(STUDENT_ID), any(AccountType.class), any(PlannerItem.class)))
+        when(googleCalendarService.createAssignmentEvent(eq(USER_ID), eq(STUDENT_ID), any(AccountType.class), any(PlannerItem.class), any()))
                 .thenReturn("event-id");
         when(tokenService.getCalendarId(eq(USER_ID), eq(STUDENT_ID), any(AccountType.class)))
                 .thenReturn(Optional.of("calendar-id"));
@@ -480,5 +480,253 @@ class CalendarSyncServiceTest {
         // Test filtered result
         CalendarSyncService.SyncResult filtered = CalendarSyncService.SyncResult.filtered();
         assertThat(filtered.getStatus()).isEqualTo("filtered");
+    }
+    
+    @Test
+    void handleAssignmentStatusChange_WithCompletedStatus_ShouldMarkEventAsCompleted() {
+        // Arrange
+        testAssignment.setSubmitted(true);
+        testSettings.setSyncCompletedAssignments(true);
+        
+        CalendarEventMapping existingMapping = new CalendarEventMapping();
+        existingMapping.setAssignmentId(ASSIGNMENT_ID);
+        existingMapping.setStudentId(STUDENT_ID);
+        existingMapping.setAccountType(AccountType.PARENT);
+        existingMapping.setGoogleEventId("existing-event-id");
+        
+        when(syncSettingsRepository.findByUserIdAndStudentId(USER_ID, STUDENT_ID))
+                .thenReturn(Optional.of(testSettings));
+        when(tokenService.getConnectionStatus(USER_ID, STUDENT_ID))
+                .thenReturn(connectionStatus);
+        when(eventMappingRepository.findByAssignmentIdAndStudentIdAndAccountType(
+                ASSIGNMENT_ID, STUDENT_ID, AccountType.PARENT))
+                .thenReturn(Optional.of(existingMapping));
+        when(eventMappingRepository.findByAssignmentIdAndStudentIdAndAccountType(
+                ASSIGNMENT_ID, STUDENT_ID, AccountType.STUDENT))
+                .thenReturn(Optional.of(existingMapping));
+        when(googleCalendarService.markEventAsCompleted(
+                USER_ID, STUDENT_ID, AccountType.PARENT, "existing-event-id", testAssignment))
+                .thenReturn(true);
+        when(googleCalendarService.markEventAsCompleted(
+                USER_ID, STUDENT_ID, AccountType.STUDENT, "existing-event-id", testAssignment))
+                .thenReturn(true);
+        
+        // Act
+        CalendarSyncService.SyncResult result = calendarSyncService.handleAssignmentStatusChange(
+                USER_ID, STUDENT_ID, testAssignment, "completed");
+        
+        // Assert
+        assertThat(result.isSuccess()).isTrue();
+        assertThat(result.getUpdatedCount()).isEqualTo(2); // Both parent and student events marked as completed
+        
+        verify(googleCalendarService, times(2)).markEventAsCompleted(
+                eq(USER_ID), eq(STUDENT_ID), any(AccountType.class), eq("existing-event-id"), eq(testAssignment));
+        verify(eventMappingRepository, times(2)).save(any(CalendarEventMapping.class));
+    }
+    
+    @Test
+    void handleAssignmentStatusChange_WithDeletedStatus_ShouldDeleteEvents() {
+        // Arrange
+        CalendarEventMapping existingMapping = new CalendarEventMapping();
+        existingMapping.setAssignmentId(ASSIGNMENT_ID);
+        existingMapping.setStudentId(STUDENT_ID);
+        existingMapping.setAccountType(AccountType.PARENT);
+        existingMapping.setGoogleEventId("existing-event-id");
+        
+        when(syncSettingsRepository.findByUserIdAndStudentId(USER_ID, STUDENT_ID))
+                .thenReturn(Optional.of(testSettings));
+        when(tokenService.getConnectionStatus(USER_ID, STUDENT_ID))
+                .thenReturn(connectionStatus);
+        when(eventMappingRepository.findByAssignmentIdAndStudentIdAndAccountType(
+                ASSIGNMENT_ID, STUDENT_ID, AccountType.PARENT))
+                .thenReturn(Optional.of(existingMapping));
+        when(eventMappingRepository.findByAssignmentIdAndStudentIdAndAccountType(
+                ASSIGNMENT_ID, STUDENT_ID, AccountType.STUDENT))
+                .thenReturn(Optional.of(existingMapping));
+        when(googleCalendarService.deleteAssignmentEvent(
+                USER_ID, STUDENT_ID, AccountType.PARENT, "existing-event-id"))
+                .thenReturn(true);
+        when(googleCalendarService.deleteAssignmentEvent(
+                USER_ID, STUDENT_ID, AccountType.STUDENT, "existing-event-id"))
+                .thenReturn(true);
+        
+        // Act
+        CalendarSyncService.SyncResult result = calendarSyncService.handleAssignmentStatusChange(
+                USER_ID, STUDENT_ID, testAssignment, "deleted");
+        
+        // Assert
+        assertThat(result.isSuccess()).isTrue();
+        assertThat(result.getDeletedCount()).isEqualTo(2); // Both parent and student events deleted
+        
+        verify(googleCalendarService, times(2)).deleteAssignmentEvent(
+                eq(USER_ID), eq(STUDENT_ID), any(AccountType.class), eq("existing-event-id"));
+        verify(eventMappingRepository, times(2)).delete(any(CalendarEventMapping.class));
+    }
+    
+    @Test
+    void handleAssignmentStatusChange_WithUpdatedStatus_ShouldUpdateEvents() {
+        // Arrange
+        CalendarEventMapping existingMapping = new CalendarEventMapping();
+        existingMapping.setAssignmentId(ASSIGNMENT_ID);
+        existingMapping.setStudentId(STUDENT_ID);
+        existingMapping.setAccountType(AccountType.PARENT);
+        existingMapping.setGoogleEventId("existing-event-id");
+        
+        when(syncSettingsRepository.findByUserIdAndStudentId(USER_ID, STUDENT_ID))
+                .thenReturn(Optional.of(testSettings));
+        when(tokenService.getConnectionStatus(USER_ID, STUDENT_ID))
+                .thenReturn(connectionStatus);
+        when(eventMappingRepository.findByAssignmentIdAndStudentIdAndAccountType(
+                ASSIGNMENT_ID, STUDENT_ID, AccountType.PARENT))
+                .thenReturn(Optional.of(existingMapping));
+        when(eventMappingRepository.findByAssignmentIdAndStudentIdAndAccountType(
+                ASSIGNMENT_ID, STUDENT_ID, AccountType.STUDENT))
+                .thenReturn(Optional.of(existingMapping));
+        when(googleCalendarService.updateAssignmentEvent(
+                eq(USER_ID), eq(STUDENT_ID), eq(AccountType.PARENT), eq("existing-event-id"), 
+                eq(testAssignment), any()))
+                .thenReturn(true);
+        when(googleCalendarService.updateAssignmentEvent(
+                eq(USER_ID), eq(STUDENT_ID), eq(AccountType.STUDENT), eq("existing-event-id"), 
+                eq(testAssignment), any()))
+                .thenReturn(true);
+        
+        // Act
+        CalendarSyncService.SyncResult result = calendarSyncService.handleAssignmentStatusChange(
+                USER_ID, STUDENT_ID, testAssignment, "updated");
+        
+        // Assert
+        assertThat(result.isSuccess()).isTrue();
+        assertThat(result.getUpdatedCount()).isEqualTo(2); // Both parent and student events updated
+        
+        verify(googleCalendarService, times(2)).updateAssignmentEvent(
+                eq(USER_ID), eq(STUDENT_ID), any(AccountType.class), eq("existing-event-id"), 
+                eq(testAssignment), any());
+        verify(eventMappingRepository, times(2)).save(any(CalendarEventMapping.class));
+    }
+    
+    @Test
+    void handleAssignmentStatusChange_WithSyncDisabled_ShouldReturnDisabled() {
+        // Arrange
+        testSettings.setSyncEnabled(false);
+        
+        when(syncSettingsRepository.findByUserIdAndStudentId(USER_ID, STUDENT_ID))
+                .thenReturn(Optional.of(testSettings));
+        
+        // Act
+        CalendarSyncService.SyncResult result = calendarSyncService.handleAssignmentStatusChange(
+                USER_ID, STUDENT_ID, testAssignment, "completed");
+        
+        // Assert
+        assertThat(result.getStatus()).isEqualTo("disabled");
+        verify(googleCalendarService, never()).markEventAsCompleted(any(), any(), any(), any(), any());
+    }
+    
+    @Test
+    void handleAssignmentStatusChange_WithNoEventMapping_ShouldReturnSuccess() {
+        // Arrange
+        when(syncSettingsRepository.findByUserIdAndStudentId(USER_ID, STUDENT_ID))
+                .thenReturn(Optional.of(testSettings));
+        when(tokenService.getConnectionStatus(USER_ID, STUDENT_ID))
+                .thenReturn(connectionStatus);
+        when(eventMappingRepository.findByAssignmentIdAndStudentIdAndAccountType(
+                ASSIGNMENT_ID, STUDENT_ID, AccountType.PARENT))
+                .thenReturn(Optional.empty());
+        when(eventMappingRepository.findByAssignmentIdAndStudentIdAndAccountType(
+                ASSIGNMENT_ID, STUDENT_ID, AccountType.STUDENT))
+                .thenReturn(Optional.empty());
+        
+        // Act
+        CalendarSyncService.SyncResult result = calendarSyncService.handleAssignmentStatusChange(
+                USER_ID, STUDENT_ID, testAssignment, "completed");
+        
+        // Assert
+        assertThat(result.isSuccess()).isTrue();
+        assertThat(result.getTotalProcessed()).isEqualTo(0);
+        
+        verify(googleCalendarService, never()).markEventAsCompleted(any(), any(), any(), any(), any());
+    }
+    
+    @Test
+    void syncSingleAssignmentToCalendar_WithCompletedAssignmentAndSyncCompletedDisabled_ShouldDeleteEvent() {
+        // Arrange
+        testAssignment.setSubmitted(true);
+        testSettings.setSyncCompletedAssignments(false);
+        testSettings.setSyncToStudentCalendar(false); // Only sync to parent calendar
+        
+        CalendarEventMapping existingMapping = new CalendarEventMapping();
+        existingMapping.setAssignmentId(ASSIGNMENT_ID);
+        existingMapping.setStudentId(STUDENT_ID);
+        existingMapping.setAccountType(AccountType.PARENT);
+        existingMapping.setGoogleEventId("existing-event-id");
+        
+        CalendarTokenService.CalendarConnectionStatus parentOnlyConnection = 
+                new CalendarTokenService.CalendarConnectionStatus(true, false);
+        
+        when(syncSettingsRepository.findByUserIdAndStudentId(USER_ID, STUDENT_ID))
+                .thenReturn(Optional.of(testSettings));
+        when(tokenService.getConnectionStatus(USER_ID, STUDENT_ID))
+                .thenReturn(parentOnlyConnection);
+        when(eventMappingRepository.findByAssignmentIdAndStudentIdAndAccountType(
+                ASSIGNMENT_ID, STUDENT_ID, AccountType.PARENT))
+                .thenReturn(Optional.of(existingMapping));
+        when(eventMappingRepository.findByAssignmentIdAndStudentIdAndAccountType(
+                ASSIGNMENT_ID, STUDENT_ID, AccountType.STUDENT))
+                .thenReturn(Optional.empty());
+        when(googleCalendarService.deleteAssignmentEvent(
+                USER_ID, STUDENT_ID, AccountType.PARENT, "existing-event-id"))
+                .thenReturn(true);
+        
+        // Act
+        CalendarSyncService.SyncResult result = calendarSyncService.syncSingleAssignment(
+                USER_ID, STUDENT_ID, testAssignment);
+        
+        // Assert
+        assertThat(result.isSuccess()).isTrue();
+        assertThat(result.getDeletedCount()).isEqualTo(1); // Parent event deleted
+        
+        verify(googleCalendarService).deleteAssignmentEvent(
+                USER_ID, STUDENT_ID, AccountType.PARENT, "existing-event-id");
+        verify(eventMappingRepository).delete(existingMapping);
+    }
+    
+    @Test
+    void syncSingleAssignmentToCalendar_WithCompletedAssignmentAndSyncCompletedEnabled_ShouldMarkAsCompleted() {
+        // Arrange
+        testAssignment.setSubmitted(true);
+        testSettings.setSyncCompletedAssignments(true);
+        testSettings.setSyncToStudentCalendar(false); // Only sync to parent calendar
+        
+        CalendarEventMapping existingMapping = new CalendarEventMapping();
+        existingMapping.setAssignmentId(ASSIGNMENT_ID);
+        existingMapping.setStudentId(STUDENT_ID);
+        existingMapping.setAccountType(AccountType.PARENT);
+        existingMapping.setGoogleEventId("existing-event-id");
+        
+        CalendarTokenService.CalendarConnectionStatus parentOnlyConnection = 
+                new CalendarTokenService.CalendarConnectionStatus(true, false);
+        
+        when(syncSettingsRepository.findByUserIdAndStudentId(USER_ID, STUDENT_ID))
+                .thenReturn(Optional.of(testSettings));
+        when(tokenService.getConnectionStatus(USER_ID, STUDENT_ID))
+                .thenReturn(parentOnlyConnection);
+        when(eventMappingRepository.findByAssignmentIdAndStudentIdAndAccountType(
+                ASSIGNMENT_ID, STUDENT_ID, AccountType.PARENT))
+                .thenReturn(Optional.of(existingMapping));
+        when(googleCalendarService.markEventAsCompleted(
+                USER_ID, STUDENT_ID, AccountType.PARENT, "existing-event-id", testAssignment))
+                .thenReturn(true);
+        
+        // Act
+        CalendarSyncService.SyncResult result = calendarSyncService.syncSingleAssignment(
+                USER_ID, STUDENT_ID, testAssignment);
+        
+        // Assert
+        assertThat(result.isSuccess()).isTrue();
+        assertThat(result.getUpdatedCount()).isEqualTo(1); // Parent event marked as completed
+        
+        verify(googleCalendarService).markEventAsCompleted(
+                USER_ID, STUDENT_ID, AccountType.PARENT, "existing-event-id", testAssignment);
+        verify(eventMappingRepository).save(existingMapping);
     }
 }
