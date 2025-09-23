@@ -26,6 +26,10 @@ google:
     client-secret: ${GOOGLE_CLIENT_SECRET:your-google-client-secret-dev}
     redirect-uri: http://localhost:8080/auth/google/callback
 
+app:
+  encryption:
+    key: ${ENCRYPTION_KEY:}
+
 logging:
   level:
     com.studytracker: DEBUG

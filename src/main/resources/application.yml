@@ -53,6 +53,10 @@ google:
   calendar:
     application-name: ${GOOGLE_CALENDAR_APP_NAME:StudyTracker Calendar Integration}
 
+app:
+  encryption:
+    key: ${ENCRYPTION_KEY:}
+
 logging:
   level:
     com.studytracker: INFO
