@@ -34,7 +34,7 @@
   - Write unit tests with mocked Google Calendar API responses
   - _Requirements: 1.2, 1.3, 2.1, 4.1, 4.2_
 
-- [ ] 5. Create student invitation system
+- [x] 5. Create student invitation system
   - Implement invitation token generation and validation
   - Create email invitation service for sending calendar sync invitations
   - Add invitation acceptance flow with secure token verification

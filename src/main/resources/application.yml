@@ -25,6 +25,21 @@ spring:
     prefix: classpath:/templates/
     suffix: .html
   
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    from: ${MAIL_FROM:noreply@studytracker.com}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          connectiontimeout: 5000
+          timeout: 3000
+          writetimeout: 5000
 
 
 server:
@@ -54,8 +69,12 @@ google:
     application-name: ${GOOGLE_CALENDAR_APP_NAME:StudyTracker Calendar Integration}
 
 app:
+  name: StudyTracker
+  base-url: ${BASE_URL:http://localhost:8084}
   encryption:
     key: ${ENCRYPTION_KEY:}
+  invitation:
+    expiry-hours: ${INVITATION_EXPIRY_HOURS:72}
 
 logging:
   level:
