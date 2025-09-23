@@ -53,7 +53,7 @@
   - Write unit tests for sync logic and filtering
   - _Requirements: 2.1, 2.2, 2.4, 2.6, 3.1_
 
-- [ ] 7. Build calendar controller and OAuth flow handling
+- [x] 7. Build calendar controller and OAuth flow handling
   - Implement CalendarController with dual OAuth flow endpoints
   - Add calendar integration page with connection status for both accounts
   - Implement OAuth callback handling for parent and student accounts
@@ -63,7 +63,7 @@
   - Write controller tests for OAuth flows and endpoint functionality
   - _Requirements: 1.1, 1.2, 1.4, 6.1, 6.5_
 
-- [ ] 8. Create calendar integration UI templates
+- [x] 8. Create calendar integration UI templates
   - Design calendar integration page with dual account connection options
   - Create parent calendar connection interface with OAuth flow
   - Implement student email input and invitation sending interface

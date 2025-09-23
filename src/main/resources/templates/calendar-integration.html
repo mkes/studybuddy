@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar Integration - StudyTracker</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .calendar-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .connection-card {
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .connection-card.connected {
+            border-color: #28a745;
+            background: linear-gradient(135deg, #f8fff9, #e8f5e8);
+        }
+        
+        .connection-card.disconnected {
+            border-color: #6c757d;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        }
+        
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        
+        .status-indicator.connected {
+            background-color: #28a745;
+            box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.2);
+        }
+        
+        .status-indicator.disconnected {
+            background-color: #6c757d;
+        }
+        
+        .oauth-button {
+            background: linear-gradient(135deg, #4285f4, #34a853);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .oauth-button:hover {
+            background: linear-gradient(135deg, #3367d6, #2d8f47);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
+        }
+        
+        .sync-controls {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+        
+        .settings-summary {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+        
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #f1f3f4;
+        }
+        
+        .setting-item:last-child {
+            border-bottom: none;
+        }
+        
+        .invitation-status {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            border: 1px solid #2196f3;
+            border-radius: 8px;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        
+        .modal-header {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+        }
+        
+        .modal-header .btn-close {
+            filter: invert(1);
+        }
+        
+        .reminder-input-group {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .reminder-tag {
+            background: #e9ecef;
+            border: 1px solid #ced4da;
+            border-radius: 20px;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.875rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        
+        .reminder-tag .remove-tag {
+            background: none;
+            border: none;
+            color: #6c757d;
+            cursor: pointer;
+            padding: 0;
+            margin-left: 0.25rem;
+        }
+        
+        @media (max-width: 768px) {
+            .calendar-container {
+                padding: 0 15px;
+            }
+            
+            .connection-cards {
+                flex-direction: column;
+            }
+            
+            .settings-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .oauth-button {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .btn-group-mobile {
+                display: flex;
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            .btn-group-mobile .btn {
+                width: 100%;
+            }
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        
+        .loading-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="calendar-container">
+            <!-- Header -->
+            <div class="row mb-4">
+                <div class="col">
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a th:href="@{/students}">Students</a></li>
+                            <li class="breadcrumb-item"><a th:href="@{/students/{id}(id=${studentId})}">Dashboard</a></li>
+                            <li class="breadcrumb-item active">Calendar Integration</li>
+                        </ol>
+                    </nav>
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3">
+                        <div>
+                            <h1 class="h2 mb-1">
+                                <i class="fas fa-calendar-alt me-2 text-primary"></i>
+                                Calendar Integration
+                            </h1>
+                            <p class="text-muted mb-0" th:if="${student}">
+                                <i class="fas fa-user me-1"></i>
+                                <span th:text="${student.name}">Student Name</span>
+                            </p>
+                        </div>
+                        <div class="btn-group-mobile mt-3 mt-md-0">
+                            <a th:href="@{/students/{id}(id=${studentId})}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-1"></i>
+                                Back to Dashboard
+                            </a>
+                        </div>
+                    </div>
+                    <div class="alert alert-info d-flex align-items-start">
+                        <i class="fas fa-info-circle me-2 mt-1"></i>
+                        <div>
+                            <strong>About Calendar Integration:</strong>
+                            Connect your Google Calendar and optionally your student's calendar to automatically sync assignments with reminders. 
+                            This helps you stay on top of due dates and never miss an assignment.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        <!-- Alert Messages -->
+        <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>
+            <span th:text="${success}">Success message</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        
+        <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i>
+            <span th:text="${error}">Error message</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        
+        <div th:if="${info}" class="alert alert-info alert-dismissible fade show" role="alert">
+            <i class="fas fa-info-circle me-2"></i>
+            <span th:text="${info}">Info message</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+            <!-- Calendar Connection Status -->
+            <div class="row mb-4 connection-cards">
+                <div class="col-lg-6 mb-3 mb-lg-0">
+                    <div class="card connection-card h-100" th:classappend="${parentConnected ? 'connected' : 'disconnected'}">
+                        <div class="card-header bg-transparent border-0 pb-0">
+                            <h5 class="card-title mb-0 d-flex align-items-center">
+                                <i class="fas fa-user-tie me-2 text-primary"></i>
+                                Parent Calendar
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="connection-status">
+                                <span class="status-indicator" th:classappend="${parentConnected ? 'connected' : 'disconnected'}"></span>
+                                <div>
+                                    <div class="fw-semibold" th:text="${parentConnected ? 'Connected' : 'Not Connected'}">Status</div>
+                                    <small class="text-muted" th:if="${parentConnected and parentEmail}" th:text="${parentEmail}">email@example.com</small>
+                                    <small class="text-muted" th:unless="${parentConnected}">Connect your Google Calendar to sync assignments</small>
+                                </div>
+                            </div>
+                            
+                            <div th:if="${parentConnected}" class="d-flex flex-column flex-sm-row gap-2">
+                                <button type="button" class="btn btn-outline-success btn-sm" disabled>
+                                    <i class="fas fa-check me-1"></i>Connected
+                                </button>
+                                <form th:action="@{/students/{id}/calendar/disconnect(id=${studentId})}" method="post" class="d-inline">
+                                    <input type="hidden" name="accountType" value="PARENT">
+                                    <button type="submit" class="btn btn-outline-danger btn-sm" 
+                                            onclick="return confirm('Are you sure you want to disconnect your calendar? This will stop syncing assignments to your calendar.')">
+                                        <i class="fas fa-unlink me-1"></i>Disconnect
+                                    </button>
+                                </form>
+                            </div>
+                            <div th:unless="${parentConnected}">
+                                <a th:href="@{/auth/google/calendar/parent?studentId={studentId}(studentId=${studentId})}" 
+                                   class="oauth-button">
+                                    <i class="fab fa-google"></i>
+                                    Connect Google Calendar
+                                </a>
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        <i class="fas fa-shield-alt me-1"></i>
+                                        Secure OAuth 2.0 authentication
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6">
+                    <div class="card connection-card h-100" th:classappend="${studentConnected ? 'connected' : 'disconnected'}">
+                        <div class="card-header bg-transparent border-0 pb-0">
+                            <h5 class="card-title mb-0 d-flex align-items-center">
+                                <i class="fas fa-user-graduate me-2 text-success"></i>
+                                Student Calendar
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="connection-status">
+                                <span class="status-indicator" th:classappend="${studentConnected ? 'connected' : 'disconnected'}"></span>
+                                <div>
+                                    <div class="fw-semibold" th:text="${studentConnected ? 'Connected' : 'Not Connected'}">Status</div>
+                                    <small class="text-muted" th:if="${studentConnected and studentEmail}" th:text="${studentEmail}">student@example.com</small>
+                                    <small class="text-muted" th:unless="${studentConnected}">Student needs to connect their calendar</small>
+                                </div>
+                            </div>
+                            
+                            <div th:if="${studentConnected}" class="d-flex flex-column flex-sm-row gap-2">
+                                <button type="button" class="btn btn-outline-success btn-sm" disabled>
+                                    <i class="fas fa-check me-1"></i>Connected
+                                </button>
+                                <form th:action="@{/students/{id}/calendar/disconnect(id=${studentId})}" method="post" class="d-inline">
+                                    <input type="hidden" name="accountType" value="STUDENT">
+                                    <button type="submit" class="btn btn-outline-danger btn-sm"
+                                            onclick="return confirm('Are you sure you want to disconnect the student calendar? This will stop syncing assignments to their calendar.')">
+                                        <i class="fas fa-unlink me-1"></i>Disconnect
+                                    </button>
+                                </form>
+                            </div>
+                            <div th:unless="${studentConnected}">
+                                <div th:if="${hasActiveInvitation}" class="invitation-status">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-paper-plane me-2 text-info"></i>
+                                        <div>
+                                            <div class="fw-semibold">Invitation Sent</div>
+                                            <small>Waiting for student to accept</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-flex flex-column flex-sm-row gap-2">
+                                    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#inviteStudentModal"
+                                            th:disabled="${hasActiveInvitation}">
+                                        <i class="fas fa-envelope me-1"></i>
+                                        <span th:if="${hasActiveInvitation}">Invitation Pending</span>
+                                        <span th:unless="${hasActiveInvitation}">Send Invitation</span>
+                                    </button>
+                                    
+                                    <div th:if="${hasActiveInvitation}">
+                                        <form th:action="@{/students/{id}/calendar/revoke-invitation(id=${studentId})}" method="post" class="d-inline">
+                                            <button type="submit" class="btn btn-outline-secondary btn-sm"
+                                                    onclick="return confirm('Are you sure you want to revoke the invitation?')">
+                                                <i class="fas fa-times me-1"></i>Revoke
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Optional: Student can receive assignments in their own calendar
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sync Controls -->
+            <div class="row mb-4" th:if="${parentConnected or studentConnected}">
+                <div class="col">
+                    <div class="sync-controls">
+                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3">
+                            <div>
+                                <h5 class="mb-1">
+                                    <i class="fas fa-sync me-2 text-primary"></i>
+                                    Sync Controls
+                                </h5>
+                                <p class="text-muted mb-0 small">Manage assignment synchronization to your calendars</p>
+                            </div>
+                            <div class="mt-2 mt-md-0">
+                                <small class="text-muted" th:if="${lastSyncTime}">
+                                    <i class="fas fa-clock me-1"></i>
+                                    Last sync: <span th:text="${#temporals.format(lastSyncTime, 'MMM dd, yyyy HH:mm')}">Never</span>
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex flex-column flex-sm-row gap-2 mb-3">
+                            <button type="button" class="btn btn-success" onclick="triggerManualSync()" id="syncButton">
+                                <i class="fas fa-sync me-1"></i>Sync Now
+                            </button>
+                            <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#syncSettingsModal">
+                                <i class="fas fa-cog me-1"></i>Sync Settings
+                            </button>
+                            <button type="button" class="btn btn-outline-info" onclick="showSyncHistory()">
+                                <i class="fas fa-history me-1"></i>Sync History
+                            </button>
+                        </div>
+                        
+                        <div id="syncStatus" class="d-none">
+                            <div class="alert alert-info mb-0">
+                                <div class="d-flex align-items-center">
+                                    <div class="spinner-border spinner-border-sm me-2" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <span>Syncing assignments to calendars...</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="syncResult" class="d-none"></div>
+                        
+                        <!-- Quick Stats -->
+                        <div class="row mt-3" th:if="${syncStats}">
+                            <div class="col-6 col-md-3">
+                                <div class="text-center">
+                                    <div class="h5 mb-0 text-primary" th:text="${syncStats.totalEvents ?: 0}">0</div>
+                                    <small class="text-muted">Total Events</small>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="text-center">
+                                    <div class="h5 mb-0 text-success" th:text="${syncStats.parentEvents ?: 0}">0</div>
+                                    <small class="text-muted">Parent Calendar</small>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="text-center">
+                                    <div class="h5 mb-0 text-info" th:text="${syncStats.studentEvents ?: 0}">0</div>
+                                    <small class="text-muted">Student Calendar</small>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="text-center">
+                                    <div class="h5 mb-0 text-warning" th:text="${syncStats.upcomingEvents ?: 0}">0</div>
+                                    <small class="text-muted">Upcoming</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sync Settings Summary -->
+            <div class="row" th:if="${syncSettings}">
+                <div class="col">
+                    <div class="settings-summary">
+                        <div class="card-header bg-transparent">
+                            <h5 class="card-title mb-0 d-flex align-items-center">
+                                <i class="fas fa-list-check me-2 text-primary"></i>
+                                Current Sync Settings
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="settings-grid">
+                                <div>
+                                    <h6 class="text-muted mb-3">General Settings</h6>
+                                    <div class="setting-item">
+                                        <span>Sync Enabled</span>
+                                        <span class="badge" th:classappend="${syncSettings.syncEnabled ? 'bg-success' : 'bg-secondary'}"
+                                              th:text="${syncSettings.syncEnabled ? 'Yes' : 'No'}">Yes</span>
+                                    </div>
+                                    <div class="setting-item">
+                                        <span>Auto Sync</span>
+                                        <span class="badge" th:classappend="${syncSettings.autoSyncEnabled ? 'bg-success' : 'bg-secondary'}"
+                                              th:text="${syncSettings.autoSyncEnabled ? 'Yes' : 'No'}">Yes</span>
+                                    </div>
+                                    <div class="setting-item">
+                                        <span>Sync Completed</span>
+                                        <span class="badge" th:classappend="${syncSettings.syncCompletedAssignments ? 'bg-success' : 'bg-secondary'}"
+                                              th:text="${syncSettings.syncCompletedAssignments ? 'Yes' : 'No'}">No</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h6 class="text-muted mb-3">Calendar Targets</h6>
+                                    <div class="setting-item">
+                                        <span>Parent Calendar</span>
+                                        <span class="badge" th:classappend="${syncSettings.syncToParentCalendar ? 'bg-success' : 'bg-secondary'}"
+                                              th:text="${syncSettings.syncToParentCalendar ? 'Yes' : 'No'}">Yes</span>
+                                    </div>
+                                    <div class="setting-item">
+                                        <span>Student Calendar</span>
+                                        <span class="badge" th:classappend="${syncSettings.syncToStudentCalendar ? 'bg-success' : 'bg-secondary'}"
+                                              th:text="${syncSettings.syncToStudentCalendar ? 'Yes' : 'No'}">Yes</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h6 class="text-muted mb-3">Reminder Settings</h6>
+                                    <div class="setting-item">
+                                        <span>Parent Reminders</span>
+                                        <small class="text-muted" th:text="${syncSettings.parentReminderMinutes ?: '24h, 2h'}">24h, 2h</small>
+                                    </div>
+                                    <div class="setting-item">
+                                        <span>Student Reminders</span>
+                                        <small class="text-muted" th:text="${syncSettings.studentReminderMinutes ?: '2h, 30min'}">2h, 30min</small>
+                                    </div>
+                                </div>
+                                <div th:if="${syncSettings.includedCourses or syncSettings.excludedAssignmentTypes}">
+                                    <h6 class="text-muted mb-3">Filters</h6>
+                                    <div class="setting-item" th:if="${syncSettings.includedCourses}">
+                                        <span>Included Courses</span>
+                                        <small class="text-muted" th:text="${#strings.listJoin(syncSettings.includedCourses, ', ')}">All</small>
+                                    </div>
+                                    <div class="setting-item" th:if="${syncSettings.excludedAssignmentTypes}">
+                                        <span>Excluded Types</span>
+                                        <small class="text-muted" th:text="${#strings.listJoin(syncSettings.excludedAssignmentTypes, ', ')}">None</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+        <!-- Student Invitation Modal -->
+        <div class="modal fade" id="inviteStudentModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="fas fa-envelope me-2"></i>
+                            Send Calendar Invitation
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form th:action="@{/students/{id}/calendar/invite-student(id=${studentId})}" method="post" id="invitationForm">
+                        <div class="modal-body">
+                            <div class="text-center mb-4">
+                                <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+                                    <i class="fas fa-user-graduate fa-2x text-primary"></i>
+                                </div>
+                            </div>
+                            
+                            <p class="text-center mb-4">Send a calendar sync invitation to your student so they can connect their Google Calendar and receive assignment reminders.</p>
+                            
+                            <div class="mb-3">
+                                <label for="studentEmail" class="form-label fw-semibold">Student's Google Email Address</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                                    <input type="email" class="form-control" id="studentEmail" name="studentEmail" 
+                                           placeholder="student@gmail.com" required>
+                                </div>
+                                <div class="form-text">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    This should be the Google account your student uses for their calendar.
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="customMessage" class="form-label fw-semibold">Custom Message (Optional)</label>
+                                <textarea class="form-control" id="customMessage" name="customMessage" rows="3" 
+                                          placeholder="Add a personal message to the invitation email..."></textarea>
+                            </div>
+                            
+                            <div class="alert alert-info border-0">
+                                <div class="d-flex">
+                                    <i class="fas fa-clock me-2 mt-1"></i>
+                                    <div>
+                                        <strong>Invitation Details:</strong>
+                                        <ul class="mb-0 mt-1">
+                                            <li>Expires in 72 hours</li>
+                                            <li>Secure link for calendar connection</li>
+                                            <li>Student can accept or decline</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                                <i class="fas fa-times me-1"></i>Cancel
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane me-1"></i>Send Invitation
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sync Settings Modal -->
+        <div class="modal fade" id="syncSettingsModal" tabindex="-1">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="fas fa-cog me-2"></i>
+                            Calendar Sync Settings
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form th:action="@{/students/{id}/calendar/settings(id=${studentId})}" method="post" th:object="${syncSettings}" id="settingsForm">
+                        <div class="modal-body">
+                            <!-- General Settings -->
+                            <div class="mb-4">
+                                <h6 class="text-primary mb-3">
+                                    <i class="fas fa-toggle-on me-2"></i>General Settings
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-check form-switch mb-3">
+                                            <input class="form-check-input" type="checkbox" th:field="*{syncEnabled}" id="syncEnabled">
+                                            <label class="form-check-label" for="syncEnabled">
+                                                <strong>Enable calendar sync</strong>
+                                                <br><small class="text-muted">Turn on/off all calendar synchronization</small>
+                                            </label>
+                                        </div>
+                                        <div class="form-check form-switch mb-3">
+                                            <input class="form-check-input" type="checkbox" th:field="*{autoSyncEnabled}" id="autoSyncEnabled">
+                                            <label class="form-check-label" for="autoSyncEnabled">
+                                                <strong>Enable automatic sync</strong>
+                                                <br><small class="text-muted">Automatically sync new assignments</small>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check form-switch mb-3">
+                                            <input class="form-check-input" type="checkbox" th:field="*{syncCompletedAssignments}" id="syncCompletedAssignments">
+                                            <label class="form-check-label" for="syncCompletedAssignments">
+                                                <strong>Sync completed assignments</strong>
+                                                <br><small class="text-muted">Keep completed assignments in calendar</small>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Calendar Targets -->
+                            <div class="mb-4">
+                                <h6 class="text-success mb-3">
+                                    <i class="fas fa-calendar-check me-2"></i>Calendar Targets
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-check form-switch mb-3">
+                                            <input class="form-check-input" type="checkbox" th:field="*{syncToParentCalendar}" id="syncToParentCalendar">
+                                            <label class="form-check-label" for="syncToParentCalendar">
+                                                <strong>Sync to parent calendar</strong>
+                                                <br><small class="text-muted">Add events to your Google Calendar</small>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check form-switch mb-3">
+                                            <input class="form-check-input" type="checkbox" th:field="*{syncToStudentCalendar}" id="syncToStudentCalendar">
+                                            <label class="form-check-label" for="syncToStudentCalendar">
+                                                <strong>Sync to student calendar</strong>
+                                                <br><small class="text-muted">Add events to student's Google Calendar</small>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Reminder Settings -->
+                            <div class="mb-4">
+                                <h6 class="text-warning mb-3">
+                                    <i class="fas fa-bell me-2"></i>Reminder Settings
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Parent Reminders</label>
+                                        <div class="mb-2">
+                                            <div id="parentReminderTags" class="d-flex flex-wrap gap-1 mb-2"></div>
+                                            <div class="input-group">
+                                                <input type="text" class="form-control" id="parentReminderInput" 
+                                                       placeholder="Enter minutes (e.g., 1440 for 24h)">
+                                                <button type="button" class="btn btn-outline-secondary" onclick="addReminder('parent')">
+                                                    <i class="fas fa-plus"></i>
+                                                </button>
+                                            </div>
+                                            <input type="hidden" name="parentReminders" id="parentRemindersHidden" value="1440,120">
+                                        </div>
+                                        <div class="form-text">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Common: 1440 (24h), 720 (12h), 120 (2h)
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Student Reminders</label>
+                                        <div class="mb-2">
+                                            <div id="studentReminderTags" class="d-flex flex-wrap gap-1 mb-2"></div>
+                                            <div class="input-group">
+                                                <input type="text" class="form-control" id="studentReminderInput" 
+                                                       placeholder="Enter minutes (e.g., 120 for 2h)">
+                                                <button type="button" class="btn btn-outline-secondary" onclick="addReminder('student')">
+                                                    <i class="fas fa-plus"></i>
+                                                </button>
+                                            </div>
+                                            <input type="hidden" name="studentReminders" id="studentRemindersHidden" value="120,30">
+                                        </div>
+                                        <div class="form-text">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Common: 120 (2h), 60 (1h), 30 (30min)
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Filter Settings -->
+                            <div class="mb-4">
+                                <h6 class="text-info mb-3">
+                                    <i class="fas fa-filter me-2"></i>Filter Settings
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Included Courses</label>
+                                        <select class="form-select" name="includedCourses" multiple size="4">
+                                            <option value="">All Courses</option>
+                                            <option th:each="course : ${availableCourses}" th:value="${course}" th:text="${course}">Course Name</option>
+                                        </select>
+                                        <div class="form-text">Hold Ctrl/Cmd to select multiple courses</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Excluded Assignment Types</label>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="excludedAssignmentTypes" value="quiz" id="excludeQuiz">
+                                            <label class="form-check-label" for="excludeQuiz">Quizzes</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="excludedAssignmentTypes" value="discussion" id="excludeDiscussion">
+                                            <label class="form-check-label" for="excludeDiscussion">Discussions</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="excludedAssignmentTypes" value="assignment" id="excludeAssignment">
+                                            <label class="form-check-label" for="excludeAssignment">Assignments</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                                <i class="fas fa-times me-1"></i>Cancel
+                            </button>
+                            <button type="button" class="btn btn-outline-primary" onclick="resetToDefaults()">
+                                <i class="fas fa-undo me-1"></i>Reset to Defaults
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>Save Settings
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sync History Modal -->
+        <div class="modal fade" id="syncHistoryModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="fas fa-history me-2"></i>
+                            Sync History
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="syncHistoryContent">
+                            <div class="text-center">
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div id="loadingOverlay" class="loading-overlay d-none">
+            <div class="loading-content">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <h5>Processing...</h5>
+                <p class="text-muted mb-0">Please wait while we process your request.</p>
+            </div>
+        </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+        <script>
+            // Global variables
+            let parentReminders = [1440, 120]; // Default: 24h, 2h
+            let studentReminders = [120, 30];  // Default: 2h, 30min
+
+            // Initialize page
+            document.addEventListener('DOMContentLoaded', function() {
+                initializeReminderTags();
+                setupFormValidation();
+            });
+
+            function triggerManualSync() {
+                const syncStatus = document.getElementById('syncStatus');
+                const syncResult = document.getElementById('syncResult');
+                const syncButton = document.getElementById('syncButton');
+                
+                // Show loading state
+                syncStatus.classList.remove('d-none');
+                syncResult.classList.add('d-none');
+                syncButton.disabled = true;
+                syncButton.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Syncing...';
+                
+                // Make AJAX request
+                fetch(`/students/${[[${studentId}]]}/calendar/sync`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    syncStatus.classList.add('d-none');
+                    syncResult.classList.remove('d-none');
+                    
+                    if (data.success) {
+                        syncResult.innerHTML = `
+                            <div class="alert alert-success border-0">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-check-circle me-2 text-success"></i>
+                                    <div>
+                                        <strong>Sync Completed Successfully!</strong>
+                                        <br><small>${data.message}</small>
+                                        ${data.stats ? `<br><small class="text-muted">Synced ${data.stats.eventsCreated} events to ${data.stats.calendarsUpdated} calendar(s)</small>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        // Refresh page after 2 seconds to show updated stats
+                        setTimeout(() => location.reload(), 2000);
+                    } else {
+                        syncResult.innerHTML = `
+                            <div class="alert alert-danger border-0">
+                                <div class="d-flex align-items-start">
+                                    <i class="fas fa-exclamation-circle me-2 text-danger mt-1"></i>
+                                    <div>
+                                        <strong>Sync Failed</strong>
+                                        <br><small>${data.message || 'An error occurred during synchronization'}</small>
+                                        ${data.errors && data.errors.length > 0 ? '<br><small class="text-muted">' + data.errors.join('<br>') + '</small>' : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    syncStatus.classList.add('d-none');
+                    syncResult.classList.remove('d-none');
+                    syncResult.innerHTML = `
+                        <div class="alert alert-danger border-0">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-exclamation-circle me-2 text-danger"></i>
+                                <div>
+                                    <strong>Connection Error</strong>
+                                    <br><small>Failed to sync: ${error.message}</small>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                })
+                .finally(() => {
+                    syncButton.disabled = false;
+                    syncButton.innerHTML = '<i class="fas fa-sync me-1"></i>Sync Now';
+                });
+            }
+
+            function showSyncHistory() {
+                const modal = new bootstrap.Modal(document.getElementById('syncHistoryModal'));
+                const content = document.getElementById('syncHistoryContent');
+                
+                modal.show();
+                
+                // Load sync history
+                fetch(`/students/${[[${studentId}]]}/calendar/sync-history`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.history && data.history.length > 0) {
+                            content.innerHTML = `
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Status</th>
+                                                <th>Events</th>
+                                                <th>Details</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${data.history.map(entry => `
+                                                <tr>
+                                                    <td>${new Date(entry.timestamp).toLocaleString()}</td>
+                                                    <td>
+                                                        <span class="badge ${entry.success ? 'bg-success' : 'bg-danger'}">
+                                                            ${entry.success ? 'Success' : 'Failed'}
+                                                        </span>
+                                                    </td>
+                                                    <td>${entry.eventsProcessed || 0}</td>
+                                                    <td><small class="text-muted">${entry.message || 'No details'}</small></td>
+                                                </tr>
+                                            `).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            `;
+                        } else {
+                            content.innerHTML = `
+                                <div class="text-center py-4">
+                                    <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                                    <h5 class="text-muted">No Sync History</h5>
+                                    <p class="text-muted">No synchronization attempts have been recorded yet.</p>
+                                </div>
+                            `;
+                        }
+                    })
+                    .catch(error => {
+                        content.innerHTML = `
+                            <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-circle me-2"></i>
+                                Failed to load sync history: ${error.message}
+                            </div>
+                        `;
+                    });
+            }
+
+            function initializeReminderTags() {
+                updateReminderTags('parent', parentReminders);
+                updateReminderTags('student', studentReminders);
+            }
+
+            function addReminder(type) {
+                const input = document.getElementById(`${type}ReminderInput`);
+                const minutes = parseInt(input.value);
+                
+                if (isNaN(minutes) || minutes <= 0) {
+                    alert('Please enter a valid number of minutes');
+                    return;
+                }
+                
+                const reminders = type === 'parent' ? parentReminders : studentReminders;
+                
+                if (!reminders.includes(minutes)) {
+                    reminders.push(minutes);
+                    reminders.sort((a, b) => b - a); // Sort descending
+                    updateReminderTags(type, reminders);
+                }
+                
+                input.value = '';
+            }
+
+            function removeReminder(type, minutes) {
+                const reminders = type === 'parent' ? parentReminders : studentReminders;
+                const index = reminders.indexOf(minutes);
+                
+                if (index > -1) {
+                    reminders.splice(index, 1);
+                    updateReminderTags(type, reminders);
+                }
+            }
+
+            function updateReminderTags(type, reminders) {
+                const container = document.getElementById(`${type}ReminderTags`);
+                const hiddenInput = document.getElementById(`${type}RemindersHidden`);
+                
+                container.innerHTML = reminders.map(minutes => `
+                    <span class="reminder-tag">
+                        ${formatMinutes(minutes)}
+                        <button type="button" class="remove-tag" onclick="removeReminder('${type}', ${minutes})">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </span>
+                `).join('');
+                
+                hiddenInput.value = reminders.join(',');
+                
+                // Update global variables
+                if (type === 'parent') {
+                    parentReminders = reminders;
+                } else {
+                    studentReminders = reminders;
+                }
+            }
+
+            function formatMinutes(minutes) {
+                if (minutes >= 1440) {
+                    const days = Math.floor(minutes / 1440);
+                    return `${days}d`;
+                } else if (minutes >= 60) {
+                    const hours = Math.floor(minutes / 60);
+                    return `${hours}h`;
+                } else {
+                    return `${minutes}min`;
+                }
+            }
+
+            function resetToDefaults() {
+                if (confirm('Are you sure you want to reset all settings to their default values?')) {
+                    // Reset checkboxes
+                    document.getElementById('syncEnabled').checked = true;
+                    document.getElementById('autoSyncEnabled').checked = true;
+                    document.getElementById('syncCompletedAssignments').checked = false;
+                    document.getElementById('syncToParentCalendar').checked = true;
+                    document.getElementById('syncToStudentCalendar').checked = true;
+                    
+                    // Reset reminders
+                    parentReminders = [1440, 120];
+                    studentReminders = [120, 30];
+                    updateReminderTags('parent', parentReminders);
+                    updateReminderTags('student', studentReminders);
+                    
+                    // Reset filters
+                    document.querySelector('select[name="includedCourses"]').selectedIndex = 0;
+                    document.querySelectorAll('input[name="excludedAssignmentTypes"]').forEach(cb => cb.checked = false);
+                }
+            }
+
+            function setupFormValidation() {
+                // Add form validation for invitation form
+                const invitationForm = document.getElementById('invitationForm');
+                if (invitationForm) {
+                    invitationForm.addEventListener('submit', function(e) {
+                        const email = document.getElementById('studentEmail').value;
+                        if (!email || !email.includes('@')) {
+                            e.preventDefault();
+                            alert('Please enter a valid email address');
+                            return false;
+                        }
+                    });
+                }
+
+                // Add form validation for settings form
+                const settingsForm = document.getElementById('settingsForm');
+                if (settingsForm) {
+                    settingsForm.addEventListener('submit', function(e) {
+                        const syncEnabled = document.getElementById('syncEnabled').checked;
+                        const parentCalendar = document.getElementById('syncToParentCalendar').checked;
+                        const studentCalendar = document.getElementById('syncToStudentCalendar').checked;
+                        
+                        if (syncEnabled && !parentCalendar && !studentCalendar) {
+                            e.preventDefault();
+                            alert('Please select at least one calendar to sync to when sync is enabled');
+                            return false;
+                        }
+                    });
+                }
+            }
+
+            function showLoadingOverlay() {
+                document.getElementById('loadingOverlay').classList.remove('d-none');
+            }
+
+            function hideLoadingOverlay() {
+                document.getElementById('loadingOverlay').classList.add('d-none');
+            }
+
+            // Handle OAuth redirects with loading
+            document.querySelectorAll('.oauth-button').forEach(button => {
+                button.addEventListener('click', function() {
+                    showLoadingOverlay();
+                });
+            });
+
+            // Handle form submissions with loading
+            document.querySelectorAll('form').forEach(form => {
+                form.addEventListener('submit', function() {
+                    showLoadingOverlay();
+                });
+            });
+
+            // Hide loading overlay when page loads
+            window.addEventListener('load', function() {
+                hideLoadingOverlay();
+            });
+        </script>
+</body>
+</html>

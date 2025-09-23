@@ -144,10 +144,16 @@
                         </p>
                     </div>
                     <div class="col-md-4 text-md-end">
-                        <a href="/students" class="btn btn-light">
-                            <i class="bi bi-arrow-left me-1"></i>
-                            Back to Students
-                        </a>
+                        <div class="btn-group" role="group">
+                            <a th:href="@{/students/{id}/calendar(id=${studentId})}" class="btn btn-outline-light">
+                                <i class="bi bi-calendar-plus me-1"></i>
+                                Calendar
+                            </a>
+                            <a href="/students" class="btn btn-light">
+                                <i class="bi bi-arrow-left me-1"></i>
+                                Back to Students
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
