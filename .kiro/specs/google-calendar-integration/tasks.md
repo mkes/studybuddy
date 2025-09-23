@@ -25,7 +25,7 @@
   - Write unit tests for encryption, decryption, and token management
   - _Requirements: 7.1, 7.2, 1.5_
 
-- [ ] 4. Build Google Calendar API service layer
+- [x] 4. Build Google Calendar API service layer
   - Implement GoogleCalendarService with Google Calendar API v3 client
   - Add OAuth 2.0 flow initiation for both parent and student accounts
   - Implement calendar creation methods (parent and student specific)
