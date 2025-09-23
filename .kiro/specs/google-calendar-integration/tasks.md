@@ -43,7 +43,7 @@
   - Write unit tests for invitation lifecycle and security
   - _Requirements: 6.1, 6.2, 6.3, 6.4_
 
-- [ ] 6. Implement calendar synchronization service
+- [x] 6. Implement calendar synchronization service
   - Create CalendarSyncService for orchestrating assignment synchronization
   - Implement assignment filtering based on sync settings and preferences
   - Add dual calendar event creation (parent and student calendars)
