@@ -1,3 +1,4 @@
+# Log files
 HELP.md
 .gradle
 build/
@@ -46,3 +47,13 @@ logs/
 *.log
 # Ignore Gradle build output directory
 build
+*.log
+*.log.*
+StudyBuddyApp.log
+StudyBuddyApp.log.*.gz
+
+# JSON response files
+GradesResponse.json
+
+# Compiled class files
+*.class
