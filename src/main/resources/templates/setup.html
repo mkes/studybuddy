@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Calendar Setup - StudyTracker</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .setup-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .step-card {
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .step-card:hover {
+            border-color: #007bff;
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);
+        }
+        
+        .step-header {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 10px 10px 0 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .step-number {
+            background: rgba(255, 255, 255, 0.2);
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .config-status {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        
+        .config-status.configured {
+            background: linear-gradient(135deg, #d4edda, #c3e6cb);
+            border: 1px solid #28a745;
+            color: #155724;
+        }
+        
+        .config-status.not-configured {
+            background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+            border: 1px solid #dc3545;
+            color: #721c24;
+        }
+        
+        .credential-display {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 0.75rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            word-break: break-all;
+        }
+        
+        .copy-button {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+        }
+        
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+        }
+        
+        .highlight {
+            background: #ffeaa7;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="setup-container">
+            <!-- Header -->
+            <div class="text-center mb-4">
+                <h1 class="display-5 mb-3">
+                    <i class="fab fa-google me-3 text-primary"></i>
+                    Google Calendar Integration Setup
+                </h1>
+                <p class="lead text-muted">
+                    Follow these steps to enable calendar synchronization for StudyTracker
+                </p>
+            </div>
+
+            <!-- Alert Messages -->
+            <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fas fa-check-circle me-2"></i>
+                <span th:text="${success}">Success message</span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            
+            <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                <span th:text="${error}">Error message</span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+
+            <!-- Configuration Status -->
+            <div class="config-status" th:classappend="${isConfigured ? 'configured' : 'not-configured'}">
+                <div class="d-flex align-items-center mb-2">
+                    <i class="fas fa-cog me-2"></i>
+                    <h5 class="mb-0">Configuration Status</h5>
+                </div>
+                <div th:if="${isConfigured}">
+                    <i class="fas fa-check-circle me-1"></i>
+                    <strong>Google Calendar integration is properly configured!</strong>
+                    <p class="mb-0 mt-1">You can now use calendar synchronization features.</p>
+                </div>
+                <div th:unless="${isConfigured}">
+                    <i class="fas fa-exclamation-triangle me-1"></i>
+                    <strong>Configuration required to enable Google Calendar integration</strong>
+                    <ul class="mt-2 mb-0">
+                        <li th:each="issue : ${configurationIssues}" th:text="${issue}">Configuration issue</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Step 1: Google Cloud Project -->
+            <div class="step-card">
+                <div class="step-header">
+                    <div class="step-number">1</div>
+                    <div>
+                        <h4 class="mb-0">Set up Google Cloud Project</h4>
+                        <small>Create project and enable Calendar API</small>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <ol>
+                        <li class="mb-2">
+                            <strong>Go to Google Cloud Console:</strong>
+                            <a href="https://console.cloud.google.com/" target="_blank" class="btn btn-sm btn-outline-primary ms-2">
+                                <i class="fas fa-external-link-alt me-1"></i>Open Console
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <strong>Create a new project:</strong>
+                            <ul class="mt-1">
+                                <li>Click "Select a project" → "New Project"</li>
+                                <li>Enter project name: <code>StudyTracker Calendar Integration</code></li>
+                                <li>Click "Create"</li>
+                            </ul>
+                        </li>
+                        <li class="mb-2">
+                            <strong>Enable the Calendar API:</strong>
+                            <ul class="mt-1">
+                                <li>Go to "APIs & Services" → "Library"</li>
+                                <li>Search for "Google Calendar API"</li>
+                                <li>Click on it and press "Enable"</li>
+                            </ul>
+                        </li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- Step 2: OAuth Credentials -->
+            <div class="step-card">
+                <div class="step-header">
+                    <div class="step-number">2</div>
+                    <div>
+                        <h4 class="mb-0">Create OAuth 2.0 Credentials</h4>
+                        <small>Set up authentication for calendar access</small>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <h6 class="text-primary mb-3">A. Configure OAuth Consent Screen</h6>
+                    <ol>
+                        <li>Go to "APIs & Services" → "OAuth consent screen"</li>
+                        <li>Choose "External" (unless you have Google Workspace)</li>
+                        <li>Fill required fields:
+                            <ul>
+                                <li>App name: <code>StudyTracker</code></li>
+                                <li>User support email: Your email</li>
+                                <li>Developer contact: Your email</li>
+                            </ul>
+                        </li>
+                        <li>Click "Save and Continue"</li>
+                        <li>Add scopes: <code>../auth/calendar</code> and <code>../auth/calendar.events</code></li>
+                        <li>Add test users (your email addresses)</li>
+                    </ol>
+
+                    <h6 class="text-primary mb-3 mt-4">B. Create OAuth 2.0 Client ID</h6>
+                    <ol>
+                        <li>Go to "APIs & Services" → "Credentials"</li>
+                        <li>Click "Create Credentials" → "OAuth 2.0 Client ID"</li>
+                        <li>Application type: "Web application"</li>
+                        <li>Name: <code>StudyTracker Web Client</code></li>
+                        <li>Authorized redirect URIs: 
+                            <div class="credential-display mt-1">
+                                <span th:text="${currentRedirectUri}">http://localhost:8084/auth/google/callback</span>
+                                <button class="btn btn-sm btn-outline-secondary copy-button ms-2" 
+                                        onclick="copyToClipboard(this.previousElementSibling.textContent)">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                        </li>
+                        <li>Click "Create"</li>
+                        <li><strong class="text-danger">Important:</strong> Copy the Client ID and Client Secret!</li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- Step 3: Configure Application -->
+            <div class="step-card">
+                <div class="step-header">
+                    <div class="step-number">3</div>
+                    <div>
+                        <h4 class="mb-0">Configure StudyTracker Application</h4>
+                        <small>Add your Google credentials to the application</small>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Choose one of these methods to configure your credentials:</strong>
+                    </div>
+
+                    <h6 class="text-primary mb-3">Option A: Environment Variables (Recommended)</h6>
+                    <p>Set these environment variables before starting the application:</p>
+                    <div class="code-block">
+export GOOGLE_CLIENT_ID="<span class="highlight">your-client-id-here</span>"
+export GOOGLE_CLIENT_SECRET="<span class="highlight">your-client-secret-here</span>"
+./gradlew bootRun
+                    </div>
+
+                    <h6 class="text-primary mb-3 mt-4">Option B: Update application.yml</h6>
+                    <p>Edit <code>src/main/resources/application.yml</code> and replace the placeholder values:</p>
+                    <div class="code-block">
+google:
+  oauth:
+    client-id: <span class="highlight">your-client-id-here</span>
+    client-secret: <span class="highlight">your-client-secret-here</span>
+    redirect-uri: http://localhost:8084/auth/google/callback
+    scopes:
+      - https://www.googleapis.com/auth/calendar
+      - https://www.googleapis.com/auth/calendar.events
+                    </div>
+
+                    <div class="alert alert-warning mt-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Security Note:</strong> Never commit real credentials to version control. 
+                        Use environment variables in production.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current Configuration -->
+            <div class="step-card">
+                <div class="step-header">
+                    <div class="step-number">4</div>
+                    <div>
+                        <h4 class="mb-0">Current Configuration</h4>
+                        <small>Review your current settings</small>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Client ID:</label>
+                            <div class="credential-display" th:text="${currentClientId}">Not configured</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Client Secret:</label>
+                            <div class="credential-display" th:text="${currentClientSecret}">Not configured</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Redirect URI:</label>
+                            <div class="credential-display" th:text="${currentRedirectUri}">Not configured</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Scopes:</label>
+                            <div class="credential-display">
+                                <span th:if="${currentScopes != null and !currentScopes.isEmpty()}" 
+                                      th:text="${#strings.listJoin(currentScopes, ', ')}">Not configured</span>
+                                <span th:unless="${currentScopes != null and !currentScopes.isEmpty()}">Not configured</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 mt-3">
+                        <form th:action="@{/setup/test}" method="post" class="d-inline">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-check me-1"></i>Test Configuration
+                            </button>
+                        </form>
+                        <a href="/" class="btn btn-outline-secondary">
+                            <i class="fas fa-home me-1"></i>Back to Home
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Help Section -->
+            <div class="alert alert-light border">
+                <h6 class="alert-heading">
+                    <i class="fas fa-question-circle me-2"></i>Need Help?
+                </h6>
+                <ul class="mb-0">
+                    <li>Make sure you've enabled the Google Calendar API in your Google Cloud project</li>
+                    <li>Verify that your redirect URI exactly matches: <code th:text="${currentRedirectUri}">http://localhost:8084/auth/google/callback</code></li>
+                    <li>Check that your OAuth consent screen is properly configured</li>
+                    <li>Ensure you're using the correct Client ID and Client Secret from Google Cloud Console</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(function() {
+                // Show success feedback
+                const button = event.target.closest('button');
+                const originalHTML = button.innerHTML;
+                button.innerHTML = '<i class="fas fa-check"></i>';
+                button.classList.add('btn-success');
+                button.classList.remove('btn-outline-secondary');
+                
+                setTimeout(() => {
+                    button.innerHTML = originalHTML;
+                    button.classList.remove('btn-success');
+                    button.classList.add('btn-outline-secondary');
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>

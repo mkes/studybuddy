@@ -55,16 +55,22 @@ public class GoogleCalendarService {
      */
     public String initiateOAuthFlow(AccountType accountType, String state) {
         try {
+            // Validate OAuth configuration first
+            validateOAuthConfiguration();
+            
             AuthorizationCodeFlow flow = createAuthorizationFlow();
             
-            return flow.newAuthorizationUrl()
+            String authUrl = flow.newAuthorizationUrl()
                     .setRedirectUri(oAuthProperties.getRedirectUri())
                     .setState(state)
                     .build();
+            
+            log.info("Generated OAuth URL for account type {}: {}", accountType, authUrl);
+            return authUrl;
                     
         } catch (Exception e) {
             log.error("Failed to initiate OAuth flow for account type {}", accountType, e);
-            throw new GoogleCalendarException("Failed to initiate OAuth flow", e);
+            throw new GoogleCalendarException("Failed to initiate OAuth flow: " + e.getMessage(), e);
         }
     }
     
@@ -742,6 +748,33 @@ public class GoogleCalendarService {
         }
     }
     
+    /**
+     * Validate OAuth configuration before attempting to create flows
+     */
+    private void validateOAuthConfiguration() {
+        if (oAuthProperties.getClientId() == null || 
+            oAuthProperties.getClientId().equals("your-google-client-id") ||
+            oAuthProperties.getClientId().trim().isEmpty()) {
+            throw new GoogleCalendarException("Google OAuth Client ID is not configured. Please set GOOGLE_CLIENT_ID environment variable or update application.yml");
+        }
+        
+        if (oAuthProperties.getClientSecret() == null || 
+            oAuthProperties.getClientSecret().equals("your-google-client-secret") ||
+            oAuthProperties.getClientSecret().trim().isEmpty()) {
+            throw new GoogleCalendarException("Google OAuth Client Secret is not configured. Please set GOOGLE_CLIENT_SECRET environment variable or update application.yml");
+        }
+        
+        if (oAuthProperties.getScopes() == null || oAuthProperties.getScopes().isEmpty()) {
+            throw new GoogleCalendarException("Google OAuth Scopes are not configured");
+        }
+        
+        if (oAuthProperties.getRedirectUri() == null || oAuthProperties.getRedirectUri().trim().isEmpty()) {
+            throw new GoogleCalendarException("Google OAuth Redirect URI is not configured");
+        }
+        
+        log.debug("OAuth configuration validated successfully");
+    }
+
     /**
      * Create authorization flow for OAuth
      */

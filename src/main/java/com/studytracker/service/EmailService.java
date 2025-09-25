@@ -57,6 +57,33 @@ public class EmailService {
     }
     
     /**
+     * Send generic email
+     */
+    public void sendEmail(String toEmail, String subject, String body) {
+        logger.info("Attempting to send email to: {} with subject: {}", toEmail, subject);
+        logger.info("Email configuration - From: {}, Host: {}", fromEmail, "checking...");
+        
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(toEmail);
+            message.setSubject(subject);
+            message.setText(body);
+            
+            logger.info("Email message created, attempting to send...");
+            mailSender.send(message);
+            logger.info("Email sent successfully to: {}", toEmail);
+            
+        } catch (Exception e) {
+            logger.error("Failed to send email to {}: {}", toEmail, e.getMessage(), e);
+            logger.error("Email error details: ", e);
+            
+            // Don't throw exception to prevent UI errors, just log the failure
+            logger.warn("Email sending failed, but continuing with application flow");
+        }
+    }
+
+    /**
      * Send invitation reminder email
      */
     public void sendInvitationReminder(String studentEmail, String studentName, 

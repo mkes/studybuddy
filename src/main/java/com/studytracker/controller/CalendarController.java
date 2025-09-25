@@ -3,10 +3,12 @@ package com.studytracker.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.studytracker.dto.ParentNotificationSettingsDto;
 import com.studytracker.dto.StudentDto;
 import com.studytracker.exception.GoogleCalendarException;
 import com.studytracker.model.AccountType;
 import com.studytracker.model.CalendarSyncSettings;
+import com.studytracker.model.ParentNotificationSettings;
 import com.studytracker.model.StudentCalendarInvitation;
 import com.studytracker.service.*;
 import jakarta.servlet.http.HttpSession;
@@ -38,6 +40,8 @@ public class CalendarController {
     private final CalendarSyncService syncService;
     private final StudentInvitationService invitationService;
     private final CanvasApiService canvasApiService;
+    private final CalendarSyncSettingsService syncSettingsService;
+    private final ParentNotificationService parentNotificationService;
     private final ObjectMapper objectMapper;
     
 
@@ -85,6 +89,10 @@ public class CalendarController {
             Optional<StudentCalendarInvitation> invitation = 
                     invitationService.getInvitation(userId, studentId);
             
+            // Get parent notification settings
+            Optional<ParentNotificationSettings> parentNotificationSettings = 
+                    parentNotificationService.getParentNotificationSettings(userId, studentId);
+            
             // Add model attributes
             model.addAttribute("studentId", studentId);
             model.addAttribute("student", currentStudent);
@@ -94,6 +102,10 @@ public class CalendarController {
             model.addAttribute("invitation", invitation.orElse(null));
             model.addAttribute("hasActiveInvitation", 
                     invitation.isPresent() && invitation.get().isPending());
+            model.addAttribute("parentNotificationSettings", parentNotificationSettings.orElse(null));
+            model.addAttribute("hasParentNotifications", parentNotificationSettings.isPresent());
+            model.addAttribute("parentEmailVerified", 
+                    parentNotificationSettings.map(ParentNotificationSettings::getEmailVerified).orElse(false));
             
             // Parse JSON settings for display
             model.addAttribute("includedCoursesList", parseJsonStringList(syncSettings.getIncludedCourses()));
@@ -140,6 +152,15 @@ public class CalendarController {
             
         } catch (Exception e) {
             log.error("Failed to initiate parent OAuth flow for student {}", studentId, e);
+            
+            // Check if it's a configuration issue
+            if (e.getMessage() != null && e.getMessage().contains("not configured")) {
+                redirectAttributes.addFlashAttribute("error", 
+                    "Google Calendar is not configured. Please complete the setup first.");
+                redirectAttributes.addAttribute("studentId", studentId);
+                return "redirect:/setup";
+            }
+            
             redirectAttributes.addFlashAttribute("error", "Failed to connect to Google Calendar. Please try again.");
             return "redirect:/students/" + studentId + "/calendar";
         }
@@ -495,6 +516,195 @@ public class CalendarController {
         return "redirect:/students/" + studentId + "/calendar";
     }
     
+    /**
+     * Set up parent email notifications
+     */
+    @PostMapping("/students/{studentId}/calendar/setup-parent-notifications")
+    public String setupParentNotifications(@PathVariable Long studentId,
+                                         @RequestParam String parentEmail,
+                                         @RequestParam(required = false) String parentName,
+                                         @RequestParam(defaultValue = "true") Boolean notifyAssignmentDue,
+                                         @RequestParam(defaultValue = "true") Boolean notifyAssignmentMissing,
+                                         @RequestParam(defaultValue = "true") Boolean notifyAssignmentGraded,
+                                         @RequestParam(defaultValue = "false") Boolean notifyCalendarSync,
+                                         @RequestParam(defaultValue = "false") Boolean dailySummaryEnabled,
+                                         @RequestParam(defaultValue = "08:00") String dailySummaryTime,
+                                         @RequestParam(defaultValue = "false") Boolean weeklySummaryEnabled,
+                                         @RequestParam(defaultValue = "SUNDAY") String weeklySummaryDay,
+                                         HttpSession session,
+                                         RedirectAttributes redirectAttributes) {
+        String canvasToken = (String) session.getAttribute("canvasToken");
+        if (canvasToken == null || canvasToken.trim().isEmpty()) {
+            redirectAttributes.addFlashAttribute("error", "Please log in to access StudyTracker.");
+            return "redirect:/";
+        }
+        
+        String userId = getUserId(session);
+        
+        try {
+            // Validate email format
+            if (parentEmail == null || parentEmail.trim().isEmpty() || !isValidEmail(parentEmail)) {
+                redirectAttributes.addFlashAttribute("error", "Please enter a valid email address.");
+                return "redirect:/students/" + studentId + "/calendar";
+            }
+            
+            // Create DTO
+            ParentNotificationSettingsDto settingsDto = new ParentNotificationSettingsDto();
+            settingsDto.setParentEmail(parentEmail.trim());
+            settingsDto.setParentName(parentName != null ? parentName.trim() : null);
+            settingsDto.setNotifyAssignmentDue(notifyAssignmentDue);
+            settingsDto.setNotifyAssignmentMissing(notifyAssignmentMissing);
+            settingsDto.setNotifyAssignmentGraded(notifyAssignmentGraded);
+            settingsDto.setNotifyCalendarSync(notifyCalendarSync);
+            settingsDto.setDailySummaryEnabled(dailySummaryEnabled);
+            settingsDto.setDailySummaryTime(dailySummaryTime);
+            settingsDto.setWeeklySummaryEnabled(weeklySummaryEnabled);
+            settingsDto.setWeeklySummaryDay(weeklySummaryDay);
+            
+            // Set up notifications
+            ParentNotificationSettings settings = parentNotificationService.setupParentNotifications(
+                    userId, studentId, settingsDto);
+            
+            log.info("Parent notification settings created for user {} student {} email {}", 
+                    userId, studentId, parentEmail);
+            
+            redirectAttributes.addFlashAttribute("success", 
+                    "Parent notification settings saved! Please check " + parentEmail + 
+                    " for a verification email to activate notifications.");
+            
+        } catch (Exception e) {
+            log.error("Failed to setup parent notifications for student {}", studentId, e);
+            redirectAttributes.addFlashAttribute("error", "Failed to setup notifications. Please try again.");
+        }
+        
+        return "redirect:/students/" + studentId + "/calendar";
+    }
+    
+    /**
+     * Update parent email notifications
+     */
+    @PostMapping("/students/{studentId}/calendar/update-parent-notifications")
+    public String updateParentNotifications(@PathVariable Long studentId,
+                                          @RequestParam String parentEmail,
+                                          @RequestParam(required = false) String parentName,
+                                          @RequestParam(defaultValue = "true") Boolean notifyAssignmentDue,
+                                          @RequestParam(defaultValue = "true") Boolean notifyAssignmentMissing,
+                                          @RequestParam(defaultValue = "true") Boolean notifyAssignmentGraded,
+                                          @RequestParam(defaultValue = "false") Boolean notifyCalendarSync,
+                                          @RequestParam(defaultValue = "false") Boolean dailySummaryEnabled,
+                                          @RequestParam(defaultValue = "08:00") String dailySummaryTime,
+                                          @RequestParam(defaultValue = "false") Boolean weeklySummaryEnabled,
+                                          @RequestParam(defaultValue = "SUNDAY") String weeklySummaryDay,
+                                          HttpSession session,
+                                          RedirectAttributes redirectAttributes) {
+        String canvasToken = (String) session.getAttribute("canvasToken");
+        if (canvasToken == null || canvasToken.trim().isEmpty()) {
+            redirectAttributes.addFlashAttribute("error", "Please log in to access StudyTracker.");
+            return "redirect:/";
+        }
+        
+        String userId = getUserId(session);
+        
+        try {
+            // Validate email format
+            if (parentEmail == null || parentEmail.trim().isEmpty() || !isValidEmail(parentEmail)) {
+                redirectAttributes.addFlashAttribute("error", "Please enter a valid email address.");
+                return "redirect:/students/" + studentId + "/calendar";
+            }
+            
+            // Create DTO
+            ParentNotificationSettingsDto settingsDto = new ParentNotificationSettingsDto();
+            settingsDto.setParentEmail(parentEmail.trim());
+            settingsDto.setParentName(parentName != null ? parentName.trim() : null);
+            settingsDto.setNotifyAssignmentDue(notifyAssignmentDue);
+            settingsDto.setNotifyAssignmentMissing(notifyAssignmentMissing);
+            settingsDto.setNotifyAssignmentGraded(notifyAssignmentGraded);
+            settingsDto.setNotifyCalendarSync(notifyCalendarSync);
+            settingsDto.setDailySummaryEnabled(dailySummaryEnabled);
+            settingsDto.setDailySummaryTime(dailySummaryTime);
+            settingsDto.setWeeklySummaryEnabled(weeklySummaryEnabled);
+            settingsDto.setWeeklySummaryDay(weeklySummaryDay);
+            
+            // Update notifications
+            ParentNotificationSettings settings = parentNotificationService.updateParentNotifications(
+                    userId, studentId, settingsDto);
+            
+            log.info("Parent notification settings updated for user {} student {} email {}", 
+                    userId, studentId, parentEmail);
+            
+            redirectAttributes.addFlashAttribute("success", "Parent notification settings updated successfully!");
+            
+        } catch (Exception e) {
+            log.error("Failed to update parent notifications for student {}", studentId, e);
+            redirectAttributes.addFlashAttribute("error", "Failed to update notifications. Please try again.");
+        }
+        
+        return "redirect:/students/" + studentId + "/calendar";
+    }
+    
+    /**
+     * Delete parent email notifications
+     */
+    @PostMapping("/students/{studentId}/calendar/delete-parent-notifications")
+    public String deleteParentNotifications(@PathVariable Long studentId,
+                                          HttpSession session,
+                                          RedirectAttributes redirectAttributes) {
+        String canvasToken = (String) session.getAttribute("canvasToken");
+        if (canvasToken == null || canvasToken.trim().isEmpty()) {
+            redirectAttributes.addFlashAttribute("error", "Please log in to access StudyTracker.");
+            return "redirect:/";
+        }
+        
+        String userId = getUserId(session);
+        
+        try {
+            parentNotificationService.deleteParentNotificationSettings(userId, studentId);
+            
+            log.info("Parent notification settings deleted for user {} student {}", userId, studentId);
+            redirectAttributes.addFlashAttribute("success", "Parent notification settings removed successfully.");
+            
+        } catch (Exception e) {
+            log.error("Failed to delete parent notifications for student {}", studentId, e);
+            redirectAttributes.addFlashAttribute("error", "Failed to remove notifications. Please try again.");
+        }
+        
+        return "redirect:/students/" + studentId + "/calendar";
+    }
+    
+    /**
+     * Resend parent email verification
+     */
+    @PostMapping("/students/{studentId}/calendar/resend-parent-verification")
+    public String resendParentVerification(@PathVariable Long studentId,
+                                         HttpSession session,
+                                         RedirectAttributes redirectAttributes) {
+        String canvasToken = (String) session.getAttribute("canvasToken");
+        if (canvasToken == null || canvasToken.trim().isEmpty()) {
+            redirectAttributes.addFlashAttribute("error", "Please log in to access StudyTracker.");
+            return "redirect:/";
+        }
+        
+        String userId = getUserId(session);
+        
+        try {
+            boolean sent = parentNotificationService.resendVerificationEmail(userId, studentId);
+            
+            if (sent) {
+                redirectAttributes.addFlashAttribute("success", 
+                        "Verification email sent! Please check your email to activate notifications.");
+            } else {
+                redirectAttributes.addFlashAttribute("error", 
+                        "Unable to send verification email. Email may already be verified.");
+            }
+            
+        } catch (Exception e) {
+            log.error("Failed to resend parent verification for student {}", studentId, e);
+            redirectAttributes.addFlashAttribute("error", "Failed to send verification email. Please try again.");
+        }
+        
+        return "redirect:/students/" + studentId + "/calendar";
+    }
+    
     // Helper methods
     
     private String getUserId(HttpSession session) {
@@ -505,7 +715,7 @@ public class CalendarController {
     
     private CalendarSyncSettings getSyncSettings(String userId, Long studentId) {
         // Get settings from sync service - it will create defaults if none exist
-        return new CalendarSyncSettings(userId, studentId);
+        return syncSettingsService.getSyncSettings(userId, studentId);
     }
     
     private String generateStateParameter(String userId, Long studentId, AccountType accountType) {

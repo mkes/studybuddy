@@ -75,6 +75,8 @@ app:
     key: ${ENCRYPTION_KEY:}
   invitation:
     expiry-hours: ${INVITATION_EXPIRY_HOURS:72}
+  email:
+    mock: ${MOCK_EMAIL:true}
 
 logging:
   level:
